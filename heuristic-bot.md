@@ -7,9 +7,6 @@ The weights are trained using the [heuristic training platform](./heuristic-trai
 
 Among others, you will find `aggressive`, `defensive`, `balanced`, and `chaotic` (the 4 manual rivals used in training) and the best bots resulting from the various training rounds.
 
-![Ongoing Quoriboard match, showing the cardboard-textured board, pawns and placed walls, and the side panel displaying the current turn, action mode, and remaining walls for each player](img/gameplay.png)
-*Screenshot of a human vs. human match: 9x9 board with the "cardboard" aesthetic that gives the project its name, turn/action mode panel on the right, and controls (L-Click to move/place, W to toggle wall mode, R/Space to rotate the wall).*
-
 ## Weights
 
 | Weight | Typical Sign | What it rewards/penalizes |
@@ -45,8 +42,6 @@ score = MyDistanceWeight    * my_distance
 ### Panic Mode
 
 The switch to `PanicWeights` is decided by comparing the distance to the goal of both players. The threshold of how many cells of difference trigger panic (1, 2...) **is not fixed**: it is itself a parameter trained alongside the rest of the weights within the same genetic process. In other words, the bot not only learns how to play in each mode, but also when to switch modes.
-
-![Diagram explaining when panic mode is activated by comparing the goal distance of both players](img/panic-mode.svg)
 
 ## Seed Bots
 
@@ -187,13 +182,9 @@ Important details:
 - It has no normalization or additional limit besides the natural range `0`–`4`.
 - At the edges of the board, it may count directions as "free" that actually lead off the board, because the `WallGrid` does not mark boundaries as blocked. This is a known, uncorrected inaccuracy.
 
-![Diagram explaining the calculation of FunnelingBonus: wall-free directions around the rival](img/funneling-bonus.svg)
-
 ### JumpConcededPenalty
 
 Triggered **before** the rival jumps, not after. The function reviews the rival's possible moves and looks for displacements greater than one cell (jumps). If it finds a legal jump that also reduces the rival's distance to their goal, it applies the penalty immediately — it doesn't wait for the rival to actually execute the jump.
-
-![Diagram explaining JumpConcededPenalty: penalized before the rival executes the jump](img/jump-conceded.svg)
 
 ### Candidate Move Generation
 
