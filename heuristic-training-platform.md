@@ -8,6 +8,8 @@ Genetic algorithm training system designed to find good weights for [heuristic b
 go run ./cmd/heuristic_trainer/ --config <path-to-yaml>
 ```
 
+Once the command is running, you can access it in your browser at `http://localhost:8080/heuristic-trainer.html`.
+
 Configuration files live in [configs/](/configs/). For example, there is one for training heuristics against heuristics [configs/heuristic_trainer.yaml](/configs/heuristic_trainer.yaml) and another for heuristics against minimax3 [configs/heuristic_vs_minimax3_trainer.yaml](/configs/heuristic_vs_minimax3_trainer.yaml).
 
 ## Reference Configuration
@@ -131,6 +133,8 @@ Lightweight dashboard with no frontend frameworks (no React/Vue or charting libr
 - **Weights Comparison**: Side-by-side comparison of weights between different players.
 - **Rivals View**: Which rival wins the most battles, filterable by epoch or generation.
 - **Historical Best**: The best players across all epochs and generations combined.
+
+![Heuristic training top players tab](assets/captures/heuristic-trainer-top-players.png)
 
 ## Notes / Learnings
 
