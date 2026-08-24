@@ -229,6 +229,7 @@ Selection of relevant bots emerging from the two training series (see [heuristic
 | **Bot_E6G4M29** |vs Minimax4 | Parameter | 1 | -15.43 / 10.77 / -6.29 / 8.38 / -27.58 / 18.38 | 1.91 / 19.16 / 5.88 / 9.69 / -48.98 / 22.28 |
 | **Bot_E1G2M90** |vs Minimax4 | Rival | 1 | -12.54 / 10.44 / -0.99 / 3.59 / -33.32 / 21.72 | -10.13 / 19.85 / -4.71 / -5.01 / -50.0 / 25.4 |
 | **Bot_E1G3M77** |vs Minimax4 | Rival | 0 | -15.4 / 7.35 / 1.12 / 5.29 / -35.0 / 23.72 | -9.44 / 20.99 / -2.65 / -5.01 / -48.53 / 26.9 |
+
 *Nomenclature: `E{epoch}G{generation}M{mutation_no}` — identifies the exact point in training where each bot emerged.*
 
 ## Notes / Learnings
