@@ -45,7 +45,7 @@ The switch to `PanicWeights` is decided by comparing the distance to the goal of
 
 ## Seed Bots
 
-These are the 4 manual profiles used as seeds and initial rivals in the [training platform](./training-platform.md). Each also carries its own `PanicThreshold` (number of cells difference with the rival that triggers panic mode).
+These are the 4 manual profiles used as seeds and initial rivals in the [heuristic training platform](./heuristic-training-platform.md). Each also carries its own `PanicThreshold` (number of cells difference with the rival that triggers panic mode).
 
 ```go
 // Bot_Aggressive prioritizes penalizing the rival over its own path.
