@@ -125,6 +125,19 @@ Aside from the drop from 100%, the original goal of this scenario was met: bots 
 
 See the [table of highlighted bots](./heuristic.md#highlighted-bots-from-trainings) for the specific weights of the bots mentioned here (`Player` = stood out as top players; `Rival` = promoted to the benchmark pool).
 
+
+### Heuristic vs minimax4
+
+![Heuristic vs minimax4 training evaluation tab](assets/captures/heuristic-trainer-minimax4.png)
+*Placeholder: Screenshot of the evaluation view tab, showing the epochs and generations metrics.*
+
+
+The training process against the `minimax4` engine revealed a fascinating evolutionary progression, clearly visible in the dashboard metrics:
+
+- **Initial Struggle (E1G1):** In the very first generation (`E1G1`), neither the base bots nor their mutations were able to secure wins against `minimax4`. However, a breakthrough occurred immediately in the next generation, where the top 20 bots successfully adapted and started beating it.
+- **The Rival Bottleneck (E3G1):** A significant spike in difficulty occurs around `E3G1`. Because a top-performing bot from `E2G2` was promoted into the benchmark pool as a rival, the newly generated bots and mutations found themselves capable of defeating `minimax4`, yet struggled significantly against this new, highly specialized internal rival.
+- **Refinement and Stability:** As epochs and generations progress past this point, the bots undergo continuous fine-tuning. While the average fitness (blue line) experiences periodic dips due to experimental mutations or shifting opponent dynamics, the maximum fitness (`Max Fitness`, green line) stabilizes near 100%, proving that the genetic algorithm successfully converges toward robust, highly competitive weight distributions.
+
 ## Dashboard
 
 Lightweight dashboard with no frontend frameworks (no React/Vue or charting libraries like Chart.js): a server (`telemetry.NewDashboardServer`) serves static HTML from the [web/](/web/) folder, and that HTML reads data via vanilla JS by polling `data.json` (`data_json_path`) where the trainer records evolution generation by generation. Tabs:
