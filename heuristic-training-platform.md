@@ -1,6 +1,6 @@
 # Heuristic Training Platform
 
-Genetic algorithm training system designed to find good weights for [heuristic bots](./heuristic.md). All behavior is configured via a YAML file; the general mechanism and the specific configuration used for the benchmark trainings are documented below.
+Genetic algorithm training system designed to find good weights for [heuristic bot](./heuristic-bot.md). All behavior is configured via a YAML file; the general mechanism and the specific configuration used for the benchmark trainings are documented below.
 
 ## How to Run
 
@@ -8,7 +8,7 @@ Genetic algorithm training system designed to find good weights for [heuristic b
 go run ./cmd/heuristic_trainer/ --config <path-to-yaml>
 ```
 
-Configuration files live in `<configs/>`. For example, there is one for training heuristics against heuristics (`heuristic_trainer.yaml`) and another for heuristics against minimax3 (`heuristic_vs_minimax3_trainer.yaml`).
+Configuration files live in [configs/](/configs/). For example, there is one for training heuristics against heuristics [configs/heuristic_trainer.yaml](/configs/heuristic_trainer.yaml) and another for heuristics against minimax3 [configs/heuristic_vs_minimax3_trainer.yaml](/configs/heuristic_vs_minimax3_trainer.yaml).
 
 ## Reference Configuration
 
@@ -50,6 +50,8 @@ data_json_path: "./web/heuristic.json"
 ## Cycle: Population, Generation, Epoch
 
 ### Population and Mutation
+
+![heuristic trainer evaluation dashboard](/assets/captures/heuristic-trainer-evaluation.png)
 
 Each generation (except the first one) consists of the `top_keep` best bots from the previous generation plus mutations of these bots until `population_size` is reached. Mutation happens **field by field, not as a block**: for each individual weight in `NormalWeights` and `PanicWeights`:
 
@@ -99,8 +101,8 @@ Complete training ends at epoch 10, generation 10 (or sooner if sustained degrad
 
 ### Heuristic vs heuristic
 
-![Heuristic vs heuristic training dashboard](img/training-dashboard-heuristic.png)
-*Placeholder: Screenshot of the epoch/generation summary tab.*
+![Heuristic vs heuristic training similarity tab](assets/captures/heuristic-trainer-similarity.png)
+*Placeholder: Screenshot of the similarity tab.*
 
 Out of the 4 seed profiles, `defensive` and `balanced` proved ineffective: they failed to win any matches against the trained population. `chaotic` performed slightly better, but didn't make the cut either. `aggressive` was, by far, the rival that won the most battles out of the four.
 
@@ -110,7 +112,7 @@ In **E3G5**, after 3 stagnant generations, the automatic jump to epoch 4 is trig
 
 ### Heuristic vs minimax3
 
-![Heuristic vs minimax3 training dashboard](img/training-dashboard-minimax.png)
+![Heuristic vs minimax3 training similarity tab](assets/captures/heuristic-trainer-rivals.png)
 *Placeholder: Screenshot of the rivals view tab, showing the drop in win % against minimax3.*
 
 At the beginning (E1G1), no bot is able to beat minimax3. In G2, some mutation manages a punctual win. By **E2G2**, the top 20% of best bots are already beating minimax3.
