@@ -1,0 +1,25 @@
+{
+    "source_filename": "ppo_a136_league_15611496_steps.zip",
+    "extracted_at_utc": "2026-08-29T08:53:23.850737Z",
+    "total_layers": 3,
+    "architecture_summary": [
+        {
+            "name": "policy_net.0",
+            "in_features": 491,
+            "out_features": 64,
+            "activation": "tanh"
+        },
+        {
+            "name": "policy_net.1",
+            "in_features": 64,
+            "out_features": 64,
+            "activation": "tanh"
+        },
+        {
+            "name": "action_net",
+            "in_features": 64,
+            "out_features": 136,
+            "activation": "none"
+        }
+    ]
+}

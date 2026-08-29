@@ -1,6 +1,6 @@
 # Heuristic Bot
 
-The heuristic bot evaluates every possible move or wall placement using a score function based on weights. It does not explore a game tree (unlike minimax): it simply scores the resulting state of each candidate move and chooses the highest-scoring one.
+The heuristic bot evaluates every possible move or wall placement using a score function based on weights. While it does not explore a deep game tree, it does perform a **1-ply lookahead**: for every candidate move, it assumes the opponent will play their best possible response, scoring the resulting board state in the worst-case scenario for the bot. It then chooses the action with the highest guaranteed score.
 
 The weights are trained using the [heuristic training platform](./heuristic-training-platform.md), which runs a genetic algorithm to find the best-performing combinations. The already trained bots (with their final weights) are defined in: [internal/adapters/bot/heuristic_weights.go](./internal/adapters/bot/heuristic_weights.go)
 
@@ -25,11 +25,11 @@ There are two sets of weights:
 
 ### Score Formula
 
-The score of each candidate move is a weighted sum of the 6 factors:
+The score of each candidate move is a weighted sum of the 6 factors. Note that the rival's distance is slightly adjusted (`-0.5`) in the calculations to prioritize blocking when distances are otherwise equal:
 
-```
+```text
 score = MyDistanceWeight    * my_distance
-      + RivalDistanceWeight * rival_distance
+      + RivalDistanceWeight * (rival_distance - 0.5)
       + WallReserveWeight   * remaining_walls
       + CentralityWeight    * centrality
       + FunnelingBonus      * funneling
@@ -157,13 +157,15 @@ The distance to the goal is **not** Manhattan or Euclidean: it is the real dista
 
 Direct calculation without extra normalization: `remaining_walls × WallReserveWeight`. It only values having walls in reserve as a positional advantage; it neither penalizes nor rewards the act of placing a wall itself.
 
+
+
 ### CentralityWeight
 
-Calculated from the lateral displacement relative to the center of the board:
+Calculated from the lateral displacement relative to the center of the board. It adapts dynamically to the board size:
 
 ```go
-boardCenter := 4.0
-lateralOffset := abs(lateral_position - boardCenter)
+boardCenter := float64(domain.BoardSize-1) / 2.0
+lateralOffset := math.Abs(float64(lateral_position) - boardCenter)
 centrality := boardCenter - lateralOffset
 ```
 
@@ -237,3 +239,4 @@ Selection of relevant bots emerging from the two training series (see [heuristic
 - The random bot (no intelligence, random moves) served as a baseline to define the minimum interface any game bot must fulfill before complicating things with heuristics.
 - Although the heuristic bot does not use deep learning, it is still a "trained bot": both its weights and the panic threshold come from the genetic process, not manual tuning.
 - Comparing the bots in the table, `JumpConcededPenalty` converges in almost all good bots to values close to the limit `-50.0`/`-49.x` in panic mode — it appears to be the most "non-negotiable" weight of all once training converges.
+- Anti-looping Mechanism: To prevent bots from getting stuck in infinite loops (e.g., repeatedly moving back and forth between the same two squares when blocked), a history system was implemented. The bot stores its last 6 positions in memory. If a candidate move targets one of these recent squares, a progressive penalty is applied (`-4.0` points per step back in time). This forces the bot to eventually explore a different path or place a wall instead of looping endlessly.
