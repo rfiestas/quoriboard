@@ -1,0 +1,15 @@
+grpc_target: localhost:50052
+total_timesteps: 1000000
+save_freq: 50000
+checkpoint_dir: models/ppo_a136_league/checkpoints
+tensorboard_log_dir: models/ppo_a136_league/tensorboard
+learning_rate: 0.0003
+n_steps: 2048
+batch_size: 64
+initial_model_path: models/ppo_a136_league/checkpoints/ppo_a136_league_initial.zip
+resume: true
+opponent_mode: heuristic_chaotic
+opponent_sampling: uniform
+self_model_path: models/ppo_a136_league/checkpoints/ppo_a136_league_initial.zip
+opponent_pool_cache_size: 8
+timeout: 5.0

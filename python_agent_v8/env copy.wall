@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+import random
+from collections import OrderedDict
+from pathlib import Path
+
+import grpc
+import gymnasium as gym
+import numpy as np
+from sb3_contrib import MaskablePPO
+
+from .pb import quoridor_rl_v8_pb2, quoridor_rl_v8_pb2_grpc
+
+ACTION_SPACE_SIZE = 136
+OBSERVATION_SIZE = 491
+
+
+class QuoridorLeagueEnv(gym.Env):
+    """Gymnasium wrapper for the isolated V8 server.
+
+    The Go server emits state from the player-to-move perspective. Python must
+    never apply a second vertical flip.
+    """
+
+    metadata = {"render_modes": []}
+
+    def __init__(self, grpc_target="localhost:50052", checkpoint_dir="models_quoridor_v8",
+                 opponent_sampling="uniform", opponent_pool_cache_size=8, timeout=5.0,
+                 model_loader=None):
+        super().__init__()
+        self.channel = grpc.insecure_channel(grpc_target)
+        self.stub = quoridor_rl_v8_pb2_grpc.QuoridorEnvStub(self.channel)
+        self.timeout = float(timeout)
+        self.checkpoint_dir = Path(checkpoint_dir)
+        self.opponent_sampling = opponent_sampling
+        self._cache_size = max(0, int(opponent_pool_cache_size))
+        self._model_cache = OrderedDict()
+        self._model_loader = model_loader or MaskablePPO.load
+        self.action_space = gym.spaces.Discrete(ACTION_SPACE_SIZE)
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=(OBSERVATION_SIZE,), dtype=np.float32)
+        self.agent_player_id = 1
+        self.opponent_model = None
+        self.opponent_checkpoint = None
+        self.current_mask = np.zeros(ACTION_SPACE_SIZE, dtype=bool)
+        self._last_info = {}
+
+    def _to_array(self, observation):
+        values = np.asarray(observation, dtype=np.float32)
+        if values.size != OBSERVATION_SIZE:
+            raise ValueError(f"expected {OBSERVATION_SIZE} observation values, got {values.size}")
+        return values.reshape(self.observation_space.shape)
+
+    def _load_random_historical_opponent(self):
+        checkpoints = list(self.checkpoint_dir.glob("*.zip"))
+        if not checkpoints:
+            self.opponent_model = None
+            self.opponent_checkpoint = None
+            return
+        if self.opponent_sampling not in {"uniform", "recency_weighted"}:
+            raise ValueError("opponent_sampling must be uniform or recency_weighted")
+        if self.opponent_sampling == "recency_weighted":
+            ordered = sorted(checkpoints)
+            weights = np.arange(1, len(ordered) + 1, dtype=np.float64)
+            chosen = random.choices(ordered, weights=weights, k=1)[0]
+        else:
+            chosen = random.choice(checkpoints)
+        self.opponent_checkpoint = chosen
+        key = str(chosen)
+        if key in self._model_cache:
+            self.opponent_model = self._model_cache.pop(key)
+            self._model_cache[key] = self.opponent_model
+            return
+        try:
+            model = self._model_loader(key, device="cpu")
+        except Exception:
+            self.opponent_model = None
+            return
+        if self._cache_size:
+            self._model_cache[key] = model
+            while len(self._model_cache) > self._cache_size:
+                self._model_cache.popitem(last=False)
+        self.opponent_model = model
+
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
+        self._load_random_historical_opponent()
+        self.agent_player_id = random.choice((1, 2))
+        response = self.stub.Reset(quoridor_rl_v8_pb2.ResetRequest(), timeout=self.timeout)
+        response = self._play_opponent_turn(response)
+        self.current_mask = self._mask(response.action_mask)
+        self._last_info = dict(response.info)
+        return self._to_array(response.observation), self._last_info.copy()
+
+    def step(self, action):
+        action = int(action)
+        if not self.action_space.contains(action) or not self.current_mask[action]:
+            raise ValueError(f"invalid masked action: {action}")
+        response = self.stub.Step(quoridor_rl_v8_pb2.StepRequest(action=action), timeout=self.timeout)
+        response = self._play_opponent_turn(response)
+        self.current_mask = self._mask(response.action_mask)
+        self._last_info = dict(response.info)
+        reward = self._agent_reward(response.done, self._last_info)
+        return self._to_array(response.observation), reward, bool(response.done), False, self._last_info.copy()
+
+    def _agent_reward(self, done, info):
+        """Reward from the agent's perspective, independent of whether the
+        final Step() in Go was made by the agent or by the historical
+        opponent inside _play_opponent_turn (response.reward alone is not
+        safe to reuse: Go computes it from the perspective of whoever made
+        that particular move)."""
+        if not done:
+            return 0.0
+        winner = int(info.get("winner", 0))
+        if winner == self.agent_player_id:
+            return 1.0
+        if winner == 0:
+            return -0.1
+        return -1.0
+
+    def _play_opponent_turn(self, response):
+        while not response.done and response.current_player != self.agent_player_id:
+            mask = self._mask(response.action_mask)
+            valid = np.flatnonzero(mask)
+            if valid.size == 0:
+                return response
+            if self.opponent_model is None:
+                action = int(random.choice(valid.tolist()))
+            else:
+                observation = self._to_array(response.observation)
+                action, _ = self.opponent_model.predict(observation, action_masks=mask, deterministic=False)
+                action = int(action)
+                if action < 0 or action >= ACTION_SPACE_SIZE or not mask[action]:
+                    action = int(random.choice(valid.tolist()))
+            response = self.stub.Step(quoridor_rl_v8_pb2.StepRequest(action=action), timeout=self.timeout)
+        return response
+
+    @staticmethod
+    def _mask(mask):
+        values = np.asarray(mask, dtype=bool)
+        if values.size != ACTION_SPACE_SIZE:
+            raise ValueError(f"expected {ACTION_SPACE_SIZE} mask values, got {values.size}")
+        return values
+
+    def action_masks(self):
+        """Return the valid actions using the SB3-Contrib masking API."""
+        return self.current_mask.copy()
+
+    def close(self):
+        self.channel.close()

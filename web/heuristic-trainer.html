@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quoridor Heuristic Trainer - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-primary); padding: 24px; line-height: 1.5; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .header h1 { font-size: 24px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .badge { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .nav-tabs { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        .tab-btn { background: transparent; border: none; color: var(--text-secondary); font-size: 15px; font-weight: 600; padding: 8px 16px; cursor: pointer; border-radius: 6px; transition: all 0.2s ease; }
+        .tab-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+        .tab-btn.active { color: #fff; background: var(--accent-blue); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #fff; }
+
+        .chart-container { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 24px; height: 380px; position: relative; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 24px; }
+        .table-section { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 24px; overflow: hidden; }
+
+        .controls { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .selector-box { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; flex: 1; min-width: 320px; }
+        .selector-title { font-size: 13px; font-weight: 700; color: var(--accent-blue); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .selector-title.compare { color: var(--accent-green); }
+
+        .input-group { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .input-group label { font-size: 13px; color: var(--text-secondary); }
+        select, input { background: #0f172a; border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+        select:focus, input:focus { border-color: var(--accent-blue); }
+
+        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        th { background-color: #0f172a; color: var(--text-secondary); padding: 12px; font-weight: 600; position: sticky; top: 0; cursor: pointer; user-select: none; white-space: nowrap; }
+        th:hover { color: var(--text-primary); }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        tr:hover { background-color: rgba(255, 255, 255, 0.03); }
+        tr.base-row { background-color: rgba(59, 130, 246, 0.15); }
+
+        .tag-epoch { background: rgba(139, 92, 246, 0.2); color: #a78bfa; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 4px; }
+        .tag-gen { background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+
+        .tag-rank { font-weight: bold; color: var(--accent-amber); }
+        .weights-cell { font-family: monospace; font-size: 11px; color: #cbd5e1; }
+        .win-rate { font-weight: 600; }
+        .high-win { color: #34d399; }
+        .mid-win { color: #fbbf24; }
+        .low-win { color: #f87171; }
+
+        .distance-badge { font-family: monospace; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .distance-base { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+
+        .btn-toggle { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-toggle.active { background: var(--accent-purple); border-color: var(--accent-purple); }
+
+        .glossary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+        .glossary-item { background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; }
+        .glossary-title { font-weight: 700; color: var(--accent-blue); font-size: 12px; margin-bottom: 2px; }
+        .glossary-desc { font-size: 12px; color: var(--text-secondary); }
+
+        .bot-link {
+            background: transparent;
+            border: none;
+            color: #93c5fd;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 700;
+            padding: 0;
+            font-size: 13px;
+        }
+
+        .bot-link:hover {
+            color: #bfdbfe;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1200;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-card {
+            width: min(900px, 96vw);
+            max-height: 88vh;
+            overflow: auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .modal-code {
+            white-space: pre;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+            line-height: 1.45;
+            color: #e2e8f0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            overflow: auto;
+        }
+
+        .copy-status {
+            font-size: 12px;
+            color: var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎮 Quoridor Heuristic Trainer <span class="badge" id="liveStatus">● Auto-refresh Active</span></h1>
+        <div id="lastUpdated" style="color: var(--text-secondary); font-size: 13px;">Last update: -</div>
+    </div>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="evaluation" onclick="switchTab('evaluation')">Evaluation Dashboard</button>
+        <button class="tab-btn" data-tab="similarity" onclick="switchTab('similarity')">Similarity & Metrics</button>
+        <button class="tab-btn" data-tab="rivals" onclick="switchTab('rivals')">Rivals Performance</button>
+        <button class="tab-btn" data-tab="topplayers" onclick="switchTab('topplayers')">Top Players</button>
+    </div>
+
+    <!-- TAB 1: EVALUATION DASHBOARD -->
+    <div id="evaluationTab" class="tab-content active">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Current Epoch</div>
+                <div class="stat-value" id="currentEpoch" style="color: var(--accent-purple);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Generation</div>
+                <div class="stat-value" id="currentGen">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">All-Time Best Winrate</div>
+                <div class="stat-value" id="bestWinrate">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Gen Avg Winrate</div>
+                <div class="stat-value" id="avgWinrate">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Evaluated Bots</div>
+                <div class="stat-value" id="totalBots">-</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="fitnessChart"></canvas>
+        </div>
+
+        <div class="table-section">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="epochFilter">Filter Epoch:</label>
+                    <select id="epochFilter"><option value="all">All</option></select>
+                </div>
+                <div class="input-group">
+                    <label for="genFilter">Filter Generation:</label>
+                    <select id="genFilter"><option value="all">All</option></select>
+                </div>
+                <div class="input-group">
+                    <label for="searchInput">Search Bot ID:</label>
+                    <input type="text" id="searchInput" placeholder="e.g. E1-M2...">
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="botsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('epoch')">Epoch ⇕</th>
+                            <th onclick="sortTable('generation')">Gen ⇕</th>
+                            <th onclick="sortTable('rank')">Rank ⇕</th>
+                            <th onclick="sortTable('id')">Bot ID ⇕</th>
+                            <th onclick="sortTable('winrate_calc')">Actual Winrate ⇕</th>
+                            <th onclick="sortTable('fitness')">Fitness ⇕</th>
+                            <th onclick="sortTable('games_played')">Games Played ⇕</th>
+                            <th onclick="sortTable('wins')">Wins ⇕</th>
+                            <th onclick="sortTable('panic_threshold')">Panic Thres ⇕</th>
+                            <th>Normal Weights</th>
+                            <th>Panic Weights</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: RIVALS PERFORMANCE -->
+    <div id="rivalsTab" class="tab-content">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Rival Matches</div>
+                <div class="stat-value" id="rivalTotalGames">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rival Wins</div>
+                <div class="stat-value" id="rivalTotalWins" style="color: var(--accent-green);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rival Losses</div>
+                <div class="stat-value" id="rivalTotalLosses" style="color: #f87171;">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rival Draws</div>
+                <div class="stat-value" id="rivalTotalDraws" style="color: var(--accent-amber);">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tracked Rivals</div>
+                <div class="stat-value" id="rivalCount">-</div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="rivalEpochFilter">Filter Epoch:</label>
+                    <select id="rivalEpochFilter"><option value="all">All</option></select>
+                </div>
+                <div class="input-group">
+                    <label for="rivalGenFilter">Filter Generation:</label>
+                    <select id="rivalGenFilter"><option value="all">All</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="rivalAggregateTimelineChart"></canvas>
+        </div>
+
+        <div class="chart-container"><canvas id="rivalWinsTimelineChart"></canvas></div>
+        <div class="chart-container"><canvas id="rivalLossesTimelineChart"></canvas></div>
+        <div class="chart-container"><canvas id="rivalDrawsTimelineChart"></canvas></div>
+
+        <div class="table-section">
+            <h3 style="margin-bottom: 12px;">Rivals by Win/Loss/Draw</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortRivalTable('name')">Rival ⇕</th>
+                            <th onclick="sortRivalTable('games')">Games ⇕</th>
+                            <th onclick="sortRivalTable('wins')">Wins ⇕</th>
+                            <th onclick="sortRivalTable('losses')">Losses ⇕</th>
+                            <th onclick="sortRivalTable('draws')">Draws ⇕</th>
+                            <th onclick="sortRivalTable('winRate')">Win Rate ⇕</th>
+                            <th onclick="sortRivalTable('lossRate')">Loss Rate ⇕</th>
+                            <th onclick="sortRivalTable('drawRate')">Draw Rate ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rivalTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: SIMILARITY & METRICS DASHBOARD -->
+    <div id="similarityTab" class="tab-content">
+        <div class="table-section">
+            <div class="controls">
+                <!-- Target Base Bot Selector -->
+                <div class="selector-box">
+                    <div class="selector-title">🎯 Target Base Bot Selection</div>
+                    <div class="input-group">
+                        <label>Epoch:</label>
+                        <select id="targetEpochFilter" onchange="populateTargetBots()"><option value="all">All</option></select>
+                        <label>Gen:</label>
+                        <select id="targetGenFilter" onchange="populateTargetBots()"><option value="all">All</option></select>
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>Base Bot:</label>
+                        <select id="targetBotSelect" style="flex:1;" onchange="updateSimilarityView()"></select>
+                    </div>
+                </div>
+
+                <!-- Compare Bot Selector -->
+                <div class="selector-box">
+                    <div class="selector-title compare">🔍 Comparison Bot Selection</div>
+                    <div class="input-group">
+                        <label>Epoch:</label>
+                        <select id="compareEpochFilter" onchange="populateCompareBots()"><option value="all">All</option></select>
+                        <label>Gen:</label>
+                        <select id="compareGenFilter" onchange="populateCompareBots()"><option value="all">All</option></select>
+                    </div>
+                    <div class="input-group" style="margin-bottom:0;">
+                        <label>Compare:</label>
+                        <select id="compareBotSelect" style="flex:1;" onchange="updateRadarCharts()"></select>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- WEIGHTS GLOSSARY -->
+        <div class="table-section">
+            <h3 style="margin-bottom: 8px;">📖 Quoridor Evaluation Weights Glossary</h3>
+            <div class="glossary-grid">
+                <div class="glossary-item">
+                    <div class="glossary-title">MyDist (my_distance_weight)</div>
+                    <div class="glossary-desc">Priority on shortening the bot's own path to the goal row.</div>
+                </div>
+                <div class="glossary-item">
+                    <div class="glossary-title">RivalDist (rival_distance_weight)</div>
+                    <div class="glossary-desc">Priority on lengthening the opponent's path to their goal row.</div>
+                </div>
+                <div class="glossary-item">
+                    <div class="glossary-title">WallRes (wall_reserve_weight)</div>
+                    <div class="glossary-desc">Value assigned to saving unplaced walls for crucial endgame moments.</div>
+                </div>
+                <div class="glossary-item">
+                    <div class="glossary-title">Centrality (centrality_weight)</div>
+                    <div class="glossary-desc">Preference for positioning the pawn near center files for maximum agility.</div>
+                </div>
+                <div class="glossary-item">
+                    <div class="glossary-title">JumpPenalty (jump_conceded_penalty)</div>
+                    <div class="glossary-desc">Penalty for positioning adjacent to opponent, conceding a jump advantage.</div>
+                </div>
+                <div class="glossary-item">
+                    <div class="glossary-title">Funneling (funneling_bonus)</div>
+                    <div class="glossary-desc">Reward for wall placement creating chokepoints or long detours.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h3 style="margin-bottom: 8px;">📊 Distance Metrics Breakdown</h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">
+                Similarity is calculated using the 13-dimensional Euclidean Distance across Panic Threshold, Normal Weights, and Panic Weights.
+            </p>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container"><canvas id="similarityScatterChart"></canvas></div>
+            <div class="chart-container"><canvas id="normalRadarChart"></canvas></div>
+            <div class="chart-container"><canvas id="panicRadarChart"></canvas></div>
+        </div>
+
+        <div class="table-section">
+            <h3 style="margin-bottom: 16px;">Similarity Ranking (Euclidean Distance)</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortSimTable('simRank')">Sim Rank ⇕</th>
+                            <th onclick="sortSimTable('id')">Bot ID ⇕</th>
+                            <th onclick="sortSimTable('distance')">Distance ⇕</th>
+                            <th onclick="sortSimTable('winrate_calc')">Actual Winrate ⇕</th>
+                            <th onclick="sortSimTable('games_played')">Games Played ⇕</th>
+                            <th onclick="sortSimTable('epoch')">Epoch ⇕</th>
+                            <th onclick="sortSimTable('generation')">Gen ⇕</th>
+                            <th onclick="sortSimTable('panic_threshold')">Panic Thres ⇕</th>
+                            <th>Normal Weights</th>
+                            <th>Panic Weights</th>
+                        </tr>
+                    </thead>
+                    <tbody id="similarityTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h3 style="margin-bottom: 16px;">All-Time Wins Ranking (All Epochs/Generations)</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortAllTimeWinsTable('rank')">Rank ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('id')">Bot ID ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('wins')">Total Wins ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('games')">Total Games ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('winRate')">Win Rate ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('appearances')">Appearances ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('lastEpoch')">Last Epoch ⇕</th>
+                            <th onclick="sortAllTimeWinsTable('lastGeneration')">Last Gen ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allTimeWinsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: TOP PLAYERS -->
+    <div id="topPlayersTab" class="tab-content">
+        <div class="table-section">
+            <h3 style="margin-bottom: 8px;">Top 10: Pure Effectiveness</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                Sorted by global winrate percentage, tie-breaker by total wins.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Bot ID</th>
+                            <th>Winrate</th>
+                            <th>Wins</th>
+                            <th>Games</th>
+                            <th>Distinct Epochs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topWinrateTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h3 style="margin-bottom: 8px;">Top 10: Multi-Epoch Resilience</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                Sorted by distinct epochs survived, then weighted score, then appearances.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Bot ID</th>
+                            <th>Distinct Epochs</th>
+                            <th>Weighted Score</th>
+                            <th>Wins</th>
+                            <th>Appearances</th>
+                            <th>Winrate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topResilienceTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="botWeightsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="botWeightsTitle">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h3 id="botWeightsTitle">Bot Weights</h3>
+                <button id="botWeightsClose" class="btn-toggle" type="button">Close</button>
+            </div>
+            <div id="botWeightsMeta" class="modal-meta"></div>
+            <div class="modal-actions">
+                <button id="botWeightsCopyBtn" class="btn-toggle" type="button">Copy Go Snippet</button>
+                <span id="botWeightsCopyStatus" class="copy-status"></span>
+            </div>
+            <pre id="botWeightsPreview" class="modal-code"></pre>
+        </div>
+    </div>
+
+    <script>
+        let rawData = { generations: [] };
+        let allBotsFlat = [];
+        let botConfigIndex = new Map();
+        let chartInstance = null, scatterChartInstance = null;
+        let normalRadarChartInstance = null, panicRadarChartInstance = null;
+        let rivalAggregateTimelineChartInstance = null;
+        let rivalWinsTimelineChartInstance = null;
+        let rivalLossesTimelineChartInstance = null;
+        let rivalDrawsTimelineChartInstance = null;
+
+        let sortCol = 'winrate_calc', sortAsc = false;
+        let simSortCol = 'distance', simSortAsc = true;
+        let rivalSortCol = 'winRate', rivalSortAsc = false;
+        let allTimeSortCol = 'wins', allTimeSortAsc = false;
+        let currentSimilarities = [];
+        let lastDataSnapshot = '';
+        let currentGoSnippet = '';
+
+        function escapeHTML(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderBotLink(botID) {
+            const label = String(botID || 'Unknown');
+            const encoded = encodeURIComponent(label);
+            return `<button type="button" class="bot-link" data-bot-id="${encoded}">${escapeHTML(label)}</button>`;
+        }
+
+        function formatGoNumber(value) {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return '0.0';
+            let s = num.toFixed(6).replace(/\.?0+$/, '');
+            if (!s.includes('.')) s += '.0';
+            if (s === '-0.0') s = '0.0';
+            return s;
+        }
+
+        function toGoFuncSuffix(botID) {
+            const raw = String(botID || 'Unknown').replace(/[^A-Za-z0-9_]/g, '_');
+            return /^[A-Za-z_]/.test(raw) ? raw : `_${raw}`;
+        }
+
+        function buildGoSnippet(botID, config) {
+            const nw = config.normal_weights || {};
+            const pw = config.panic_weights || {};
+            const panicThreshold = Number(config.panic_threshold ?? 0);
+            const fnName = `Bot_${toGoFuncSuffix(botID)}`;
+
+            return `// ${botID}\nfunc ${fnName}() BotConfig {\n\treturn BotConfig{\n\t\tPanicThreshold: ${panicThreshold},\n\t\tNormalWeights: BotWeights{\n\t\t\tMyDistanceWeight:    ${formatGoNumber(nw.my_distance_weight)},\n\t\t\tRivalDistanceWeight: ${formatGoNumber(nw.rival_distance_weight)},\n\t\t\tWallReserveWeight:   ${formatGoNumber(nw.wall_reserve_weight)},\n\t\t\tCentralityWeight:    ${formatGoNumber(nw.centrality_weight)},\n\t\t\tJumpConcededPenalty: ${formatGoNumber(nw.jump_conceded_penalty)},\n\t\t\tFunnelingBonus:      ${formatGoNumber(nw.funneling_bonus)},\n\t\t},\n\t\tPanicWeights: BotWeights{\n\t\t\tMyDistanceWeight:    ${formatGoNumber(pw.my_distance_weight)},\n\t\t\tRivalDistanceWeight: ${formatGoNumber(pw.rival_distance_weight)},\n\t\t\tWallReserveWeight:   ${formatGoNumber(pw.wall_reserve_weight)},\n\t\t\tCentralityWeight:    ${formatGoNumber(pw.centrality_weight)},\n\t\t\tJumpConcededPenalty: ${formatGoNumber(pw.jump_conceded_penalty)},\n\t\t\tFunnelingBonus:      ${formatGoNumber(pw.funneling_bonus)},\n\t\t},\n\t}\n}`;
+        }
+
+        function findBotConfigRecord(botID) {
+            if (botConfigIndex.has(botID)) {
+                return botConfigIndex.get(botID);
+            }
+
+            for (const bot of allBotsFlat) {
+                if (bot.id === botID && bot.config) {
+                    return {
+                        config: bot.config,
+                        epoch: bot.epoch,
+                        generation: bot.generation,
+                        rank: bot.rank ?? 0
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        function openBotWeightsModal(botID) {
+            const modal = document.getElementById('botWeightsModal');
+            const title = document.getElementById('botWeightsTitle');
+            const meta = document.getElementById('botWeightsMeta');
+            const preview = document.getElementById('botWeightsPreview');
+            const copyStatus = document.getElementById('botWeightsCopyStatus');
+
+            if (!modal || !title || !meta || !preview || !copyStatus) return;
+
+            copyStatus.textContent = '';
+            title.textContent = `Bot Weights: ${botID}`;
+
+            const record = findBotConfigRecord(botID);
+            if (!record || !record.config) {
+                meta.textContent = 'No weight config found for this bot in the loaded dataset.';
+                preview.textContent = '';
+                currentGoSnippet = '';
+                modal.classList.add('active');
+                return;
+            }
+
+            meta.textContent = `Source: Epoch ${record.epoch} · Generation ${record.generation} · Rank ${record.rank}`;
+            currentGoSnippet = buildGoSnippet(botID, record.config);
+            preview.textContent = currentGoSnippet;
+            modal.classList.add('active');
+        }
+
+        function closeBotWeightsModal() {
+            const modal = document.getElementById('botWeightsModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        async function copyCurrentGoSnippet() {
+            const status = document.getElementById('botWeightsCopyStatus');
+            if (!status) return;
+
+            if (!currentGoSnippet) {
+                status.textContent = 'No snippet available to copy.';
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(currentGoSnippet);
+                status.textContent = 'Copied to clipboard.';
+            } catch (_) {
+                const ta = document.createElement('textarea');
+                ta.value = currentGoSnippet;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                status.textContent = 'Copied to clipboard.';
+            }
+        }
+
+        function makeLegendOptions() {
+            return {
+                labels: { color: '#94a3b8' },
+                onClick: function(e, legendItem, legend) {
+                    const chart = legend.chart;
+                    const idx = legendItem.datasetIndex;
+                    const nativeEvent = e && (e.native || e);
+                    const altPressed = !!(nativeEvent && nativeEvent.altKey);
+                    const shiftPressed = !!(nativeEvent && nativeEvent.shiftKey);
+
+                    if (shiftPressed) {
+                        chart.data.datasets.forEach((_, i) => {
+                            chart.setDatasetVisibility(i, true);
+                        });
+                        chart.update();
+                        return;
+                    }
+
+                    if (altPressed) {
+                        chart.data.datasets.forEach((_, i) => {
+                            chart.setDatasetVisibility(i, i === idx);
+                        });
+                        chart.update();
+                        return;
+                    }
+
+                    const currentlyVisible = chart.isDatasetVisible(idx);
+                    chart.setDatasetVisibility(idx, !currentlyVisible);
+                    chart.update();
+                }
+            };
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const button = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (button) {
+                button.classList.add('active');
+            }
+
+            if (tabName === 'evaluation') {
+                document.getElementById('evaluationTab').classList.add('active');
+                return;
+            }
+
+            if (tabName === 'similarity') {
+                document.getElementById('similarityTab').classList.add('active');
+                initSimilarityFilters();
+                return;
+            }
+
+            if (tabName === 'rivals') {
+                document.getElementById('rivalsTab').classList.add('active');
+                populateRivalFilters();
+                renderRivalsDashboard();
+                return;
+            }
+
+            if (tabName === 'topplayers') {
+                document.getElementById('topPlayersTab').classList.add('active');
+                renderTopPlayersDashboard();
+            }
+        }
+
+        async function fetchData(force = false) {
+            try {
+                if (!force && document.hidden) return;
+
+                const response = await fetch('/data.json?t=' + new Date().getTime());
+                if (!response.ok) return;
+
+                const snapshot = await response.text();
+                if (!snapshot.trim()) return;
+
+                if (!force && snapshot === lastDataSnapshot) return;
+
+                const data = JSON.parse(snapshot);
+                lastDataSnapshot = snapshot;
+                rawData = data;
+                processData();
+                document.getElementById('lastUpdated').innerText = 'Last update: ' + new Date().toLocaleTimeString();
+            } catch (err) {
+                console.log('Waiting for data...');
+            }
+        }
+
+        function processData() {
+            if (!rawData.generations || rawData.generations.length === 0) return;
+
+            allBotsFlat = [];
+            botConfigIndex = new Map();
+            let totalEvaluated = 0, bestOverall = 0;
+
+            const epochSelect = document.getElementById('epochFilter');
+            const genSelect = document.getElementById('genFilter');
+            const selectedEpoch = epochSelect.value;
+            const selectedGen = genSelect.value;
+
+            const epochsSet = new Set(), gensSet = new Set();
+
+            rawData.generations.forEach(g => {
+                const epochNum = g.epoch || 1;
+                epochsSet.add(epochNum);
+                gensSet.add(g.generation);
+                totalEvaluated += g.bots.length;
+
+                g.bots.forEach(b => {
+                    const games = b.games_played || 0;
+                    const wins = b.wins || 0;
+                    const calculatedWinrate = games > 0 ? (wins / games) : 0;
+                    if (calculatedWinrate > bestOverall) bestOverall = calculatedWinrate;
+
+                    if (b.id && b.config) {
+                        const candidate = {
+                            config: b.config,
+                            epoch: epochNum,
+                            generation: Number(g.generation || 0),
+                            rank: Number(b.rank || 999999)
+                        };
+                        const existing = botConfigIndex.get(b.id);
+                        const shouldReplace = !existing
+                            || candidate.epoch > existing.epoch
+                            || (candidate.epoch === existing.epoch && candidate.generation > existing.generation)
+                            || (candidate.epoch === existing.epoch && candidate.generation === existing.generation && candidate.rank < existing.rank);
+                        if (shouldReplace) {
+                            botConfigIndex.set(b.id, candidate);
+                        }
+                    }
+
+                    allBotsFlat.push({
+                        epoch: epochNum,
+                        generation: g.generation,
+                        winrate_calc: calculatedWinrate,
+                        games_played: games,
+                        wins: wins,
+                        ...b
+                    });
+                });
+            });
+
+            epochSelect.innerHTML = '<option value="all">All</option>';
+            Array.from(epochsSet).sort((a,b) => a-b).forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e; opt.textContent = `Epoch ${e}`;
+                epochSelect.appendChild(opt);
+            });
+            epochSelect.value = selectedEpoch;
+
+            genSelect.innerHTML = '<option value="all">All</option>';
+            Array.from(gensSet).sort((a,b) => a-b).forEach(gen => {
+                const opt = document.createElement('option');
+                opt.value = gen; opt.textContent = `Generation ${gen}`;
+                genSelect.appendChild(opt);
+            });
+            genSelect.value = selectedGen;
+
+            const latestGen = rawData.generations[rawData.generations.length - 1];
+            document.getElementById('currentEpoch').innerText = latestGen.epoch || 1;
+            document.getElementById('currentGen').innerText = latestGen.generation;
+            document.getElementById('bestWinrate').innerText = (bestOverall * 100).toFixed(1) + '%';
+            document.getElementById('avgWinrate').innerText = (latestGen.avg_fitness * 100).toFixed(1) + '%';
+            document.getElementById('totalBots').innerText = totalEvaluated;
+
+            updateChart();
+            renderTable();
+            renderAllTimeWinsTable();
+            renderTopPlayersDashboard();
+            populateRivalFilters();
+            renderRivalsDashboard();
+
+            if (document.getElementById('similarityTab').classList.contains('active')) {
+                initSimilarityFilters();
+            }
+        }
+
+        function populateRivalFilters() {
+            const epochSel = document.getElementById('rivalEpochFilter');
+            const genSel = document.getElementById('rivalGenFilter');
+            if (!epochSel || !genSel) return;
+
+            const currentEpoch = epochSel.value;
+            const currentGen = genSel.value;
+
+            const epochs = new Set();
+            const gens = new Set();
+            (rawData.generations || []).forEach(g => {
+                epochs.add(g.epoch || 1);
+                gens.add(g.generation);
+            });
+
+            epochSel.innerHTML = '<option value="all">All</option>';
+            Array.from(epochs).sort((a, b) => a - b).forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e;
+                opt.textContent = `Epoch ${e}`;
+                epochSel.appendChild(opt);
+            });
+
+            genSel.innerHTML = '<option value="all">All</option>';
+            Array.from(gens).sort((a, b) => a - b).forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = `Generation ${g}`;
+                genSel.appendChild(opt);
+            });
+
+            epochSel.value = Array.from(epochSel.options).some(o => o.value === currentEpoch) ? currentEpoch : 'all';
+            genSel.value = Array.from(genSel.options).some(o => o.value === currentGen) ? currentGen : 'all';
+        }
+
+        function aggregateRivalStats(epochFilter, genFilter) {
+            const byRival = new Map();
+            const gens = rawData.generations || [];
+
+            gens.forEach(g => {
+                const epoch = g.epoch || 1;
+                const gen = g.generation;
+                const matchEpoch = epochFilter === 'all' || String(epoch) === String(epochFilter);
+                const matchGen = genFilter === 'all' || String(gen) === String(genFilter);
+                if (!matchEpoch || !matchGen) return;
+
+                const rivals = g.rivals || [];
+                rivals.forEach(r => {
+                    const key = r.name || 'unknown';
+                    if (!byRival.has(key)) {
+                        byRival.set(key, { name: key, games: 0, wins: 0, losses: 0, draws: 0 });
+                    }
+                    const agg = byRival.get(key);
+                    agg.games += Number(r.games || 0);
+                    agg.wins += Number(r.wins || 0);
+                    agg.losses += Number(r.losses || 0);
+                    agg.draws += Number(r.draws || 0);
+                });
+            });
+
+            const rows = Array.from(byRival.values()).map(r => {
+                const games = r.games || 0;
+                return {
+                    ...r,
+                    winRate: games > 0 ? r.wins / games : 0,
+                    lossRate: games > 0 ? r.losses / games : 0,
+                    drawRate: games > 0 ? r.draws / games : 0
+                };
+            });
+
+            rows.sort((a, b) => {
+                if (b.winRate === a.winRate) return b.games - a.games;
+                return b.winRate - a.winRate;
+            });
+
+            return rows;
+        }
+
+        function makeRivalColor(index, variant) {
+            const hue = (index * 47) % 360;
+            if (variant === 'win') return `hsl(${hue} 70% 52%)`;
+            if (variant === 'loss') return `hsl(${hue} 75% 40%)`;
+            return `hsl(${hue} 45% 65%)`;
+        }
+
+        function ensureChart(chartInstance, canvasId, chartConfig) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstance) {
+                chartInstance.data.labels = chartConfig.labels;
+                chartInstance.data.datasets = chartConfig.datasets;
+                chartInstance.options.plugins.title.text = chartConfig.title;
+                chartInstance.update();
+                return chartInstance;
+            }
+
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartConfig.labels,
+                    datasets: chartConfig.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartConfig.title,
+                            color: '#f8fafc',
+                            font: { size: 16 }
+                        },
+                        legend: makeLegendOptions()
+                    },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function updateRivalTimelineCharts() {
+            const labels = [];
+            const generations = rawData.generations || [];
+
+            generations.forEach(g => {
+                labels.push(`E${g.epoch || 1}-G${g.generation}`);
+            });
+
+            const rivalNames = [];
+            const seen = new Set();
+            generations.forEach(g => {
+                (g.rivals || []).forEach(r => {
+                    if (r && r.name && !seen.has(r.name)) {
+                        seen.add(r.name);
+                        rivalNames.push(r.name);
+                    }
+                });
+            });
+
+            const aggregateWins = [];
+            const aggregateLosses = [];
+            const aggregateDraws = [];
+
+            generations.forEach(g => {
+                const totals = (g.rivals || []).reduce((acc, r) => {
+                    acc.games += Number(r.games || 0);
+                    acc.wins += Number(r.wins || 0);
+                    acc.losses += Number(r.losses || 0);
+                    acc.draws += Number(r.draws || 0);
+                    return acc;
+                }, { games: 0, wins: 0, losses: 0, draws: 0 });
+
+                if (!totals.games) {
+                    aggregateWins.push(0);
+                    aggregateLosses.push(0);
+                    aggregateDraws.push(0);
+                } else {
+                    aggregateWins.push((totals.wins / totals.games * 100).toFixed(1));
+                    aggregateLosses.push((totals.losses / totals.games * 100).toFixed(1));
+                    aggregateDraws.push((totals.draws / totals.games * 100).toFixed(1));
+                }
+            });
+
+            rivalAggregateTimelineChartInstance = ensureChart(
+                rivalAggregateTimelineChartInstance,
+                'rivalAggregateTimelineChart',
+                {
+                    labels,
+                    title: 'All Rivals (Aggregate) - Win/Loss/Draw Evolution',
+                    datasets: [
+                        { label: 'Win %', data: aggregateWins, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.12)', tension: 0.3, fill: true },
+                        { label: 'Loss %', data: aggregateLosses, borderColor: '#ef4444', tension: 0.3, fill: false },
+                        { label: 'Draw %', data: aggregateDraws, borderColor: '#f59e0b', tension: 0.3, fill: false }
+                    ]
+                }
+            );
+
+            const winDatasets = [];
+            const lossDatasets = [];
+            const drawDatasets = [];
+
+            rivalNames.forEach((name, idx) => {
+                const rWin = [];
+                const rLoss = [];
+                const rDraw = [];
+
+                generations.forEach(g => {
+                    const rival = (g.rivals || []).find(r => r.name === name);
+                    if (!rival || !rival.games) {
+                        rWin.push(0);
+                        rLoss.push(0);
+                        rDraw.push(0);
+                    } else {
+                        const games = Number(rival.games || 0);
+                        rWin.push((Number(rival.wins || 0) / games * 100).toFixed(1));
+                        rLoss.push((Number(rival.losses || 0) / games * 100).toFixed(1));
+                        rDraw.push((Number(rival.draws || 0) / games * 100).toFixed(1));
+                    }
+                });
+
+                winDatasets.push({ label: `${name} Win %`, data: rWin, borderColor: makeRivalColor(idx, 'win'), tension: 0.25, fill: false });
+                lossDatasets.push({ label: `${name} Loss %`, data: rLoss, borderColor: makeRivalColor(idx, 'loss'), tension: 0.25, fill: false });
+                drawDatasets.push({ label: `${name} Draw %`, data: rDraw, borderColor: makeRivalColor(idx, 'draw'), tension: 0.25, fill: false });
+            });
+
+            rivalWinsTimelineChartInstance = ensureChart(
+                rivalWinsTimelineChartInstance,
+                'rivalWinsTimelineChart',
+                {
+                    labels,
+                    title: 'By Rival - Win % Evolution',
+                    datasets: winDatasets
+                }
+            );
+
+            rivalLossesTimelineChartInstance = ensureChart(
+                rivalLossesTimelineChartInstance,
+                'rivalLossesTimelineChart',
+                {
+                    labels,
+                    title: 'By Rival - Loss % Evolution',
+                    datasets: lossDatasets
+                }
+            );
+
+            rivalDrawsTimelineChartInstance = ensureChart(
+                rivalDrawsTimelineChartInstance,
+                'rivalDrawsTimelineChart',
+                {
+                    labels,
+                    title: 'By Rival - Draw % Evolution',
+                    datasets: drawDatasets
+                }
+            );
+        }
+
+        function renderRivalsDashboard() {
+            const epochFilter = document.getElementById('rivalEpochFilter').value;
+            const genFilter = document.getElementById('rivalGenFilter').value;
+            const rows = aggregateRivalStats(epochFilter, genFilter);
+
+            rows.sort((a, b) => {
+                const valA = a[rivalSortCol];
+                const valB = b[rivalSortCol];
+
+                if (typeof valA === 'string') {
+                    return rivalSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return rivalSortAsc ? valA - valB : valB - valA;
+            });
+
+            const totals = rows.reduce((acc, r) => {
+                acc.games += r.games;
+                acc.wins += r.wins;
+                acc.losses += r.losses;
+                acc.draws += r.draws;
+                return acc;
+            }, { games: 0, wins: 0, losses: 0, draws: 0 });
+
+            document.getElementById('rivalTotalGames').innerText = totals.games;
+            document.getElementById('rivalTotalWins').innerText = totals.wins;
+            document.getElementById('rivalTotalLosses').innerText = totals.losses;
+            document.getElementById('rivalTotalDraws').innerText = totals.draws;
+            document.getElementById('rivalCount').innerText = rows.length;
+
+            const tbody = document.getElementById('rivalTableBody');
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${r.name}</strong></td>
+                    <td>${r.games}</td>
+                    <td>${r.wins}</td>
+                    <td>${r.losses}</td>
+                    <td>${r.draws}</td>
+                    <td class="win-rate high-win">${(r.winRate * 100).toFixed(1)}%</td>
+                    <td class="win-rate low-win">${(r.lossRate * 100).toFixed(1)}%</td>
+                    <td class="win-rate mid-win">${(r.drawRate * 100).toFixed(1)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateRivalTimelineCharts();
+        }
+
+        function sortRivalTable(col) {
+            if (rivalSortCol === col) {
+                rivalSortAsc = !rivalSortAsc;
+            } else {
+                rivalSortCol = col;
+                rivalSortAsc = (col === 'name');
+            }
+            renderRivalsDashboard();
+        }
+
+        function updateChart() {
+            const ctx = document.getElementById('fitnessChart').getContext('2d');
+            const labels = rawData.generations.map(g => `E${g.epoch || 1}-G${g.generation}`);
+            const maxData = rawData.generations.map(g => (g.max_fitness * 100).toFixed(1));
+            const topAvgData = rawData.generations.map(g => ((g.top_avg_winrate || 0) * 100).toFixed(1));
+            const avgData = rawData.generations.map(g => (g.avg_fitness * 100).toFixed(1));
+            const minData = rawData.generations.map(g => (g.min_fitness * 100).toFixed(1));
+
+            if (chartInstance) {
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = maxData;
+                chartInstance.data.datasets[1].data = topAvgData;
+                chartInstance.data.datasets[2].data = avgData;
+                chartInstance.data.datasets[3].data = minData;
+                chartInstance.update();
+            } else {
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Max Fitness (%)', data: maxData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.3, fill: true },
+                            { label: 'Top Avg Fitness (%)', data: topAvgData, borderColor: '#F59E0B', borderDash: [5, 5], tension: 0.3 },
+                            { label: 'Avg Fitness (%)', data: avgData, borderColor: '#3b82f6', tension: 0.3 },
+                            { label: 'Min Fitness (%)', data: minData, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.3 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: { display: true, text: 'Fitness Evolution by Generation', color: '#f8fafc', font: { size: 16 } },
+                            legend: makeLegendOptions()
+                        },
+                        scales: {
+                            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderTable() {
+            const epochFilter = document.getElementById('epochFilter').value;
+            const genFilter = document.getElementById('genFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = allBotsFlat.filter(bot => {
+                const matchEpoch = epochFilter === 'all' || bot.epoch == epochFilter;
+                const matchGen = genFilter === 'all' || bot.generation == genFilter;
+                const matchSearch = bot.id.toLowerCase().includes(searchInput);
+                return matchEpoch && matchGen && matchSearch;
+            });
+
+            filtered.sort((a, b) => {
+                let valA = a[sortCol];
+                let valB = b[sortCol];
+                if (typeof valA === 'string') return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return sortAsc ? valA - valB : valB - valA;
+            });
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            filtered.forEach(bot => {
+                const winratePct = (bot.winrate_calc * 100).toFixed(1);
+                let winClass = 'low-win';
+                if (winratePct >= 60) winClass = 'high-win';
+                else if (winratePct >= 40) winClass = 'mid-win';
+
+                const nw = bot.config.normal_weights;
+                const pw = bot.config.panic_weights;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="tag-epoch">Epoch ${bot.epoch}</span></td>
+                    <td><span class="tag-gen">Gen ${bot.generation}</span></td>
+                    <td><span class="tag-rank">#${bot.rank}</span></td>
+                    <td>${renderBotLink(bot.id)}</td>
+                    <td class="win-rate ${winClass}">${bot.games_played > 0 ? winratePct + '%' : 'N/A'}</td>
+                    <td>${bot.fitness.toFixed(3)}</td>
+                    <td>${bot.games_played}</td>
+                    <td>${bot.wins} / ${bot.games_played}</td>
+                    <td>${bot.config.panic_threshold}</td>
+                    <td class="weights-cell">[${nw.my_distance_weight}, ${nw.rival_distance_weight}, ${nw.wall_reserve_weight}, ${nw.centrality_weight}, ${nw.jump_conceded_penalty}, ${nw.funneling_bonus}]</td>
+                    <td class="weights-cell">[${pw.my_distance_weight}, ${pw.rival_distance_weight}, ${pw.wall_reserve_weight}, ${pw.centrality_weight}, ${pw.jump_conceded_penalty}, ${pw.funneling_bonus}]</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function sortTable(col) {
+            if (sortCol === col) sortAsc = !sortAsc;
+            else { sortCol = col; sortAsc = false; }
+            renderTable();
+        }
+
+        function initSimilarityFilters() {
+            if (allBotsFlat.length === 0) return;
+
+            const epochsSet = new Set(), gensSet = new Set();
+            allBotsFlat.forEach(b => {
+                epochsSet.add(b.epoch);
+                gensSet.add(b.generation);
+            });
+
+            const fillSelect = (selectId) => {
+                const sel = document.getElementById(selectId);
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="all">All</option>';
+
+                if (selectId.includes('Epoch')) {
+                    Array.from(epochsSet).sort((a,b)=>a-b).forEach(e => {
+                        sel.innerHTML += `<option value="${e}">Epoch ${e}</option>`;
+                    });
+                } else if (selectId.includes('Gen')) {
+                    Array.from(gensSet).sort((a,b)=>a-b).forEach(g => {
+                        sel.innerHTML += `<option value="${g}">Gen ${g}</option>`;
+                    });
+                }
+                sel.value = currentVal || 'all';
+            };
+
+            fillSelect('targetEpochFilter');
+            fillSelect('targetGenFilter');
+
+            fillSelect('compareEpochFilter');
+            fillSelect('compareGenFilter');
+
+            populateTargetBots();
+            populateCompareBots();
+        }
+
+        function populateTargetBots() {
+            const epochVal = document.getElementById('targetEpochFilter').value;
+            const genVal = document.getElementById('targetGenFilter').value;
+
+            const targetSelect = document.getElementById('targetBotSelect');
+            const currentSelected = targetSelect.value;
+
+            let filtered = allBotsFlat.filter(b => {
+                const matchE = epochVal === 'all' || b.epoch == epochVal;
+                const matchG = genVal === 'all' || b.generation == genVal;
+                return matchE && matchG;
+            });
+
+            filtered.sort((a, b) => b.winrate_calc - a.winrate_calc);
+
+            targetSelect.innerHTML = '';
+            filtered.forEach(bot => {
+                const opt = document.createElement('option');
+                opt.value = bot.id;
+                opt.textContent = `${bot.id} (WR: ${(bot.winrate_calc * 100).toFixed(0)}%, E${bot.epoch}-G${bot.generation})`;
+                targetSelect.appendChild(opt);
+            });
+
+            if (currentSelected && filtered.some(b => b.id === currentSelected)) {
+                targetSelect.value = currentSelected;
+            } else if (filtered.length > 0) {
+                targetSelect.value = filtered[0].id;
+            }
+
+            updateSimilarityView();
+        }
+
+        function populateCompareBots() {
+            const epochVal = document.getElementById('compareEpochFilter').value;
+            const genVal = document.getElementById('compareGenFilter').value;
+
+            const compareSelect = document.getElementById('compareBotSelect');
+            const currentSelected = compareSelect.value;
+
+            let filtered = allBotsFlat.filter(b => {
+                const matchE = epochVal === 'all' || b.epoch == epochVal;
+                const matchG = genVal === 'all' || b.generation == genVal;
+                return matchE && matchG;
+            });
+
+            filtered.sort((a, b) => b.winrate_calc - a.winrate_calc);
+
+            compareSelect.innerHTML = '';
+            filtered.forEach(bot => {
+                const opt = document.createElement('option');
+                opt.value = bot.id;
+                opt.textContent = `${bot.id} (WR: ${(bot.winrate_calc * 100).toFixed(0)}%, E${bot.epoch}-G${bot.generation})`;
+                compareSelect.appendChild(opt);
+            });
+
+            const targetId = document.getElementById('targetBotSelect').value;
+
+            if (currentSelected && filtered.some(b => b.id === currentSelected)) {
+                compareSelect.value = currentSelected;
+            } else if (filtered.length > 1 && filtered[0].id === targetId) {
+                compareSelect.value = filtered[1].id;
+            } else if (filtered.length > 0) {
+                compareSelect.value = filtered[0].id;
+            }
+
+            updateRadarCharts();
+        }
+
+        function getBotVector(bot) {
+            const nw = bot.config.normal_weights;
+            const pw = bot.config.panic_weights;
+            return [
+                bot.config.panic_threshold,
+                nw.my_distance_weight, nw.rival_distance_weight, nw.wall_reserve_weight, nw.centrality_weight, nw.jump_conceded_penalty, nw.funneling_bonus,
+                pw.my_distance_weight, pw.rival_distance_weight, pw.wall_reserve_weight, pw.centrality_weight, pw.jump_conceded_penalty, pw.funneling_bonus
+            ];
+        }
+
+        function getNormalWeightsVector(bot) {
+            const nw = bot.config.normal_weights;
+            return [nw.my_distance_weight, nw.rival_distance_weight, nw.wall_reserve_weight, nw.centrality_weight, nw.jump_conceded_penalty, nw.funneling_bonus];
+        }
+
+        function getPanicWeightsVector(bot) {
+            const pw = bot.config.panic_weights;
+            return [pw.my_distance_weight, pw.rival_distance_weight, pw.wall_reserve_weight, pw.centrality_weight, pw.jump_conceded_penalty, pw.funneling_bonus];
+        }
+
+        function euclideanDistance(vecA, vecB) {
+            let sum = 0;
+            for (let i = 0; i < vecA.length; i++) sum += Math.pow(vecA[i] - vecB[i], 2);
+            return Math.sqrt(sum);
+        }
+
+        function updateSimilarityView() {
+            const targetId = document.getElementById('targetBotSelect').value;
+            const targetBot = allBotsFlat.find(b => b.id === targetId);
+            if (!targetBot) return;
+
+            const targetVec = getBotVector(targetBot);
+
+            currentSimilarities = allBotsFlat.map(bot => {
+                const vec = getBotVector(bot);
+                const dist = euclideanDistance(targetVec, vec);
+                return { ...bot, distance: dist };
+            });
+
+            currentSimilarities.sort((a, b) => a.distance - b.distance);
+            currentSimilarities.forEach((item, index) => { item.simRank = index; });
+
+            renderSimilarityTable();
+            updateScatterChart(targetBot);
+            updateRadarCharts();
+        }
+
+        function renderSimilarityTable() {
+            const targetId = document.getElementById('targetBotSelect').value;
+
+            let filtered = [...currentSimilarities];
+            filtered.sort((a, b) => {
+                let valA = a[simSortCol];
+                let valB = b[simSortCol];
+                if (typeof valA === 'string') return simSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return simSortAsc ? valA - valB : valB - valA;
+            });
+
+            const tbody = document.getElementById('similarityTableBody');
+            tbody.innerHTML = '';
+
+            filtered.forEach(bot => {
+                const isTarget = bot.id === targetId;
+                const winratePct = (bot.winrate_calc * 100).toFixed(1);
+                let winClass = 'low-win';
+                if (winratePct >= 60) winClass = 'high-win';
+                else if (winratePct >= 40) winClass = 'mid-win';
+
+                const nw = bot.config.normal_weights;
+                const pw = bot.config.panic_weights;
+
+                const row = document.createElement('tr');
+                if (isTarget) row.classList.add('base-row');
+
+                row.innerHTML = `
+                    <td>${bot.simRank === 0 ? '<span class="tag-rank">Base</span>' : '#' + bot.simRank}</td>
+                    <td>${renderBotLink(bot.id)}</td>
+                    <td><span class="distance-badge ${isTarget ? 'distance-base' : ''}">${bot.distance === 0 ? '0.000 (Base)' : bot.distance.toFixed(3)}</span></td>
+                    <td class="win-rate ${winClass}">${bot.games_played > 0 ? winratePct + '%' : 'N/A'}</td>
+                    <td>${bot.games_played}</td>
+                    <td><span class="tag-epoch">Epoch ${bot.epoch}</span></td>
+                    <td><span class="tag-gen">Gen ${bot.generation}</span></td>
+                    <td>${bot.config.panic_threshold}</td>
+                    <td class="weights-cell">[${nw.my_distance_weight}, ${nw.rival_distance_weight}, ${nw.wall_reserve_weight}, ${nw.centrality_weight}, ${nw.jump_conceded_penalty}, ${nw.funneling_bonus}]</td>
+                    <td class="weights-cell">[${pw.my_distance_weight}, ${pw.rival_distance_weight}, ${pw.wall_reserve_weight}, ${pw.centrality_weight}, ${pw.jump_conceded_penalty}, ${pw.funneling_bonus}]</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function sortSimTable(col) {
+            if (simSortCol === col) simSortAsc = !simSortAsc;
+            else { simSortCol = col; simSortAsc = (col === 'distance' || col === 'simRank'); }
+            renderSimilarityTable();
+        }
+
+        function aggregateAllTimeBotStats() {
+            const byID = new Map();
+
+            allBotsFlat.forEach(bot => {
+                const key = bot.id;
+                if (!byID.has(key)) {
+                    byID.set(key, {
+                        id: key,
+                        wins: 0,
+                        games: 0,
+                        appearances: 0,
+                        lastEpoch: 0,
+                        lastGeneration: 0
+                    });
+                }
+
+                const agg = byID.get(key);
+                agg.wins += Number(bot.wins || 0);
+                agg.games += Number(bot.games_played || 0);
+                agg.appearances += 1;
+
+                const epoch = Number(bot.epoch || 0);
+                const generation = Number(bot.generation || 0);
+                if (epoch > agg.lastEpoch || (epoch === agg.lastEpoch && generation > agg.lastGeneration)) {
+                    agg.lastEpoch = epoch;
+                    agg.lastGeneration = generation;
+                }
+            });
+
+            const rows = Array.from(byID.values()).map(r => ({
+                ...r,
+                winRate: r.games > 0 ? (r.wins / r.games) : 0,
+                rank: 0
+            }));
+
+            rows.sort((a, b) => {
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                if (b.games !== a.games) return b.games - a.games;
+                return b.winRate - a.winRate;
+            });
+
+            rows.forEach((row, idx) => {
+                row.rank = idx + 1;
+            });
+
+            return rows;
+        }
+
+        function renderAllTimeWinsTable() {
+            const tbody = document.getElementById('allTimeWinsTableBody');
+            if (!tbody) return;
+
+            const rows = aggregateAllTimeBotStats();
+            rows.sort((a, b) => {
+                const valA = a[allTimeSortCol];
+                const valB = b[allTimeSortCol];
+                if (typeof valA === 'string') {
+                    return allTimeSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return allTimeSortAsc ? valA - valB : valB - valA;
+            });
+
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+                let winClass = 'low-win';
+                const winPct = r.winRate * 100;
+                if (winPct >= 60) winClass = 'high-win';
+                else if (winPct >= 40) winClass = 'mid-win';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="tag-rank">#${r.rank}</span></td>
+                    <td>${renderBotLink(r.id)}</td>
+                    <td>${r.wins}</td>
+                    <td>${r.games}</td>
+                    <td class="win-rate ${winClass}">${winPct.toFixed(1)}%</td>
+                    <td>${r.appearances}</td>
+                    <td><span class="tag-epoch">Epoch ${r.lastEpoch}</span></td>
+                    <td><span class="tag-gen">Gen ${r.lastGeneration}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function sortAllTimeWinsTable(col) {
+            if (allTimeSortCol === col) {
+                allTimeSortAsc = !allTimeSortAsc;
+            } else {
+                allTimeSortCol = col;
+                allTimeSortAsc = (col === 'id');
+            }
+            renderAllTimeWinsTable();
+        }
+
+        function extractEpochFromBotID(botID) {
+            const match = String(botID || '').match(/E(\d+)/i);
+            if (match && match[1]) {
+                return Number(match[1]);
+            }
+            return 1;
+        }
+
+        function aggregateTopPlayerStats() {
+            const byID = new Map();
+
+            const generations = Array.isArray(rawData)
+                ? rawData
+                : (Array.isArray(rawData.generations) ? rawData.generations : [rawData]);
+
+            generations.forEach(gen => {
+                const ranking = gen?.ranking || gen?.bots || [];
+                ranking.forEach(bot => {
+                    const key = bot && Object.prototype.hasOwnProperty.call(bot, 'id')
+                        ? bot.id
+                        : (bot && Object.prototype.hasOwnProperty.call(bot, 'name') ? bot.name : 'Unknown');
+                    const wins = Number(bot?.wins || 0);
+                    const games = Number(bot?.played ?? bot?.matches ?? bot?.total_games ?? wins);
+                    const epoch = Number(gen?.epoch ?? gen?.epoca ?? extractEpochFromBotID(key));
+
+                if (!byID.has(key)) {
+                    byID.set(key, {
+                        id: key,
+                        wins: 0,
+                        games: 0,
+                        weightedScore: 0,
+                        appearances: 0,
+                        epochs: new Set()
+                    });
+                }
+
+                const row = byID.get(key);
+                row.wins += wins;
+                row.games += games;
+                row.weightedScore += wins * epoch;
+                row.appearances += 1;
+                row.epochs.add(epoch);
+            });
+            });
+
+            return Array.from(byID.values()).map(row => ({
+                ...row,
+                distinctEpochs: row.epochs.size,
+                winRate: row.games > 0 ? (row.wins / row.games) * 100 : 0
+            }));
+        }
+
+        function renderTopPlayersDashboard() {
+            const topWinrateBody = document.getElementById('topWinrateTableBody');
+            const topResilienceBody = document.getElementById('topResilienceTableBody');
+            if (!topWinrateBody || !topResilienceBody) return;
+
+            const stats = aggregateTopPlayerStats().filter(r => r.games > 0);
+
+            const topWinrate = [...stats]
+                .sort((a, b) => {
+                    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+                    return b.wins - a.wins;
+                })
+                .slice(0, 10);
+
+            const topResilience = [...stats]
+                .sort((a, b) => {
+                    if (b.distinctEpochs !== a.distinctEpochs) return b.distinctEpochs - a.distinctEpochs;
+                    if (b.weightedScore !== a.weightedScore) return b.weightedScore - a.weightedScore;
+                    return b.appearances - a.appearances;
+                })
+                .slice(0, 10);
+
+            topWinrateBody.innerHTML = '';
+            topWinrate.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="tag-rank">#${idx + 1}</span></td>
+                    <td>${renderBotLink(row.id)}</td>
+                    <td class="win-rate high-win">${row.winRate.toFixed(2)}%</td>
+                    <td>${row.wins}</td>
+                    <td>${row.games}</td>
+                    <td>${row.distinctEpochs}</td>
+                `;
+                topWinrateBody.appendChild(tr);
+            });
+
+            topResilienceBody.innerHTML = '';
+            topResilience.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="tag-rank">#${idx + 1}</span></td>
+                    <td>${renderBotLink(row.id)}</td>
+                    <td>${row.distinctEpochs}</td>
+                    <td>${row.weightedScore.toFixed(1)}</td>
+                    <td>${row.wins}</td>
+                    <td>${row.appearances}</td>
+                    <td class="win-rate high-win">${row.winRate.toFixed(2)}%</td>
+                `;
+                topResilienceBody.appendChild(tr);
+            });
+        }
+
+        function updateScatterChart(targetBot) {
+            const ctx = document.getElementById('similarityScatterChart').getContext('2d');
+            const scatterData = currentSimilarities.map(b => ({
+                x: b.distance,
+                y: b.winrate_calc * 100,
+                id: b.id,
+                games: b.games_played
+            }));
+
+            if (scatterChartInstance) {
+                scatterChartInstance.data.datasets[0].data = scatterData;
+                scatterChartInstance.options.plugins.title.text = 'Strategic Distance vs. Winrate (Direct Distance)';
+                scatterChartInstance.update();
+            } else {
+                scatterChartInstance = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Bots',
+                            data: scatterData,
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#60a5fa',
+                            pointRadius: 6,
+                            pointHoverRadius: 9
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: { display: true, text: 'Distance vs Winrate', color: '#f8fafc', font: { size: 14 } },
+                            legend: makeLegendOptions(),
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const raw = ctx.raw;
+                                        return `${raw.id}: Distance=${raw.x.toFixed(3)}, Winrate=${raw.y.toFixed(1)}%, Games=${raw.games}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Strategic Distance', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            y: { title: { display: true, text: 'Winrate (%)', color: '#94a3b8' }, min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateRadarCharts() {
+            const targetId = document.getElementById('targetBotSelect').value;
+            const compareId = document.getElementById('compareBotSelect').value;
+            const botA = allBotsFlat.find(b => b.id === targetId);
+            const botB = allBotsFlat.find(b => b.id === compareId);
+
+            if (!botA || !botB) return;
+
+            const weightLabels = ['MyDist', 'RivalDist', 'WallRes', 'Centrality', 'JumpPenalty', 'Funneling'];
+            const normVecA = getNormalWeightsVector(botA), normVecB = getNormalWeightsVector(botB);
+            const panicVecA = getPanicWeightsVector(botA), panicVecB = getPanicWeightsVector(botB);
+
+            // Radar Normal
+            const ctxNorm = document.getElementById('normalRadarChart').getContext('2d');
+            if (normalRadarChartInstance) {
+                normalRadarChartInstance.data.datasets[0].label = `${botA.id} (Base)`;
+                normalRadarChartInstance.data.datasets[0].data = normVecA;
+                normalRadarChartInstance.data.datasets[1].label = `${botB.id} (Compare)`;
+                normalRadarChartInstance.data.datasets[1].data = normVecB;
+                normalRadarChartInstance.update();
+            } else {
+                normalRadarChartInstance = new Chart(ctxNorm, {
+                    type: 'radar',
+                    data: {
+                        labels: weightLabels,
+                        datasets: [
+                            { label: `${botA.id} (Base)`, data: normVecA, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', pointBackgroundColor: '#3b82f6' },
+                            { label: `${botB.id} (Compare)`, data: normVecB, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', pointBackgroundColor: '#10b981' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { title: { display: true, text: 'Normal State Weights', color: '#f8fafc', font: { size: 14 } }, legend: makeLegendOptions() },
+                        scales: { r: { angleLines: { color: '#334155' }, grid: { color: '#334155' }, pointLabels: { color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#94a3b8', backdropColor: 'transparent' } } }
+                    }
+                });
+            }
+
+            // Radar Panic
+            const ctxPanic = document.getElementById('panicRadarChart').getContext('2d');
+            if (panicRadarChartInstance) {
+                panicRadarChartInstance.data.datasets[0].label = `${botA.id} (Base, Thres: ${botA.config.panic_threshold})`;
+                panicRadarChartInstance.data.datasets[0].data = panicVecA;
+                panicRadarChartInstance.data.datasets[1].label = `${botB.id} (Compare, Thres: ${botB.config.panic_threshold})`;
+                panicRadarChartInstance.data.datasets[1].data = panicVecB;
+                panicRadarChartInstance.update();
+            } else {
+                panicRadarChartInstance = new Chart(ctxPanic, {
+                    type: 'radar',
+                    data: {
+                        labels: weightLabels,
+                        datasets: [
+                            { label: `${botA.id} (Base, Thres: ${botA.config.panic_threshold})`, data: panicVecA, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', pointBackgroundColor: '#8b5cf6' },
+                            { label: `${botB.id} (Compare, Thres: ${botB.config.panic_threshold})`, data: panicVecB, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', pointBackgroundColor: '#f59e0b' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { title: { display: true, text: 'Panic State Weights', color: '#f8fafc', font: { size: 14 } }, legend: makeLegendOptions() },
+                        scales: { r: { angleLines: { color: '#334155' }, grid: { color: '#334155' }, pointLabels: { color: '#94a3b8', font: { size: 10 } }, ticks: { color: '#94a3b8', backdropColor: 'transparent' } } }
+                    }
+                });
+            }
+        }
+
+        document.getElementById('epochFilter').addEventListener('change', renderTable);
+        document.getElementById('genFilter').addEventListener('change', renderTable);
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        document.getElementById('rivalEpochFilter').addEventListener('change', renderRivalsDashboard);
+        document.getElementById('rivalGenFilter').addEventListener('change', renderRivalsDashboard);
+
+        document.addEventListener('click', (event) => {
+            const botLink = event.target.closest('.bot-link');
+            if (!botLink) return;
+            const encoded = botLink.getAttribute('data-bot-id') || '';
+            const botID = decodeURIComponent(encoded);
+            openBotWeightsModal(botID);
+        });
+
+        const modalClose = document.getElementById('botWeightsClose');
+        if (modalClose) {
+            modalClose.addEventListener('click', closeBotWeightsModal);
+        }
+
+        const modalBackdrop = document.getElementById('botWeightsModal');
+        if (modalBackdrop) {
+            modalBackdrop.addEventListener('click', (event) => {
+                if (event.target === modalBackdrop) {
+                    closeBotWeightsModal();
+                }
+            });
+        }
+
+        const copyBtn = document.getElementById('botWeightsCopyBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', copyCurrentGoSnippet);
+        }
+
+        setInterval(() => fetchData(false), 3000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) fetchData(true);
+        });
+        fetchData(true);
+    </script>
+</body>
+</html>

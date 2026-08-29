@@ -1,0 +1,24 @@
+epochs: 10
+generations: 10
+population_size: 100
+top_keep: 20
+benchmark_add_per_epoch: 5
+benchmark_max_size: 100
+mutation_rate_start: 0.6
+mutation_rate_end: 0.08
+mutation_amount_start: 4.0
+mutation_amount_end: 0.6
+max_turns: 120
+seed_bots:
+  - aggressive
+  - defensive
+  - balanced
+  - chaotic
+benchmark_bots:
+  - aggressive
+  - defensive
+  - balanced
+  - chaotic
+web_listen_addr: ":8080"
+dashboard_path: "./web"
+data_json_path: "./web/heuristic.json"

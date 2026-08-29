@@ -1,0 +1,270 @@
+package rlv8
+
+import (
+	"context"
+	"fmt"
+	"net"
+
+	"quoridor/internal/domain"
+	pb "quoridor/internal/rlv8/pb"
+
+	"google.golang.org/grpc"
+)
+
+const (
+	ActionSpaceSize = 136
+	ObservationSize = 491
+	maxTurns        = 150
+)
+
+// Slots 0-3: cardinales (N, S, W, E) — cubren tanto el paso simple como el
+// salto recto (2 casillas), ya que se matchean solo por signo en applyMove.
+// Slots 4-7: diagonales (NO, NE, SO, SE) — únicamente legales cuando el
+// salto recto está bloqueado (muro o borde) y el rival está adyacente.
+var moveDirections = [8][2]int{
+	{0, -1}, {0, 1}, {-1, 0}, {1, 0},
+	{-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+}
+
+type Server struct {
+	pb.UnimplementedQuoridorEnvServer
+	game      *domain.Game
+	turns     int
+	done      bool
+	winner    int
+	lastActor int
+}
+
+func NewServer() *Server { return &Server{} }
+
+func (s *Server) Reset(context.Context, *pb.ResetRequest) (*pb.EnvState, error) {
+	s.game = domain.NewGame()
+	s.game.State = domain.StatePlaying
+	s.game.InitBoard([]domain.PlayerConfig{{ID: 1}, {ID: 2}})
+	s.turns, s.done, s.winner, s.lastActor = 0, false, 0, 0
+	return s.state(0), nil
+}
+
+func (s *Server) Step(_ context.Context, request *pb.StepRequest) (*pb.EnvState, error) {
+	if s.game == nil || s.done {
+		return nil, fmt.Errorf("rlv8 episode is not active")
+	}
+	if request.GetAction() < 0 || request.GetAction() >= ActionSpaceSize {
+		return nil, fmt.Errorf("action %d outside [0,%d)", request.GetAction(), ActionSpaceSize-1)
+	}
+	actor := s.game.ActivePlayer()
+	if actor == nil {
+		return nil, fmt.Errorf("rlv8 game has no active player")
+	}
+	mask := s.actionMask(actor)
+	if !mask[request.GetAction()] {
+		return nil, fmt.Errorf("action %d is invalid", request.GetAction())
+	}
+	action := s.realAction(actor, int(request.GetAction()))
+	if action < 8 {
+		s.applyMove(actor, action)
+	} else {
+		s.applyWall(actor, action)
+	}
+	s.lastActor = actor.ID
+	s.turns++
+	if s.game.CheckWin(actor) {
+		s.finish(actor.ID)
+	} else if s.turns >= maxTurns {
+		s.finish(0)
+	} else {
+		s.game.NextTurn()
+	}
+	return s.state(rewardFor(s.winner, actor.ID, s.done)), nil
+}
+
+func (s *Server) realAction(player *domain.Player, action int) int {
+	if player.ID != 2 {
+		return action
+	}
+	// Flip vertical (mismo criterio que el resto del board: solo el eje Y
+	// se invierte). Cardinales: N<->S. Diagonales: NO<->SO, NE<->SE.
+	// W/E (2, 3) no cambian porque el eje X no se invierte.
+	switch action {
+	case 0:
+		return 1
+	case 1:
+		return 0
+	case 4:
+		return 6
+	case 5:
+		return 7
+	case 6:
+		return 4
+	case 7:
+		return 5
+	}
+	if action < 8 {
+		return action
+	}
+	index := action - 8
+	if index < 64 {
+		return 8 + (index/8)*8 + (7 - index%8)
+	}
+	index -= 64
+	return 72 + (index/8)*8 + (7 - index%8)
+}
+
+func (s *Server) finish(winner int) {
+	s.done, s.winner = true, winner
+	s.game.State = domain.StateFinished
+	if winner != 0 {
+		s.game.State = domain.StateWin
+	}
+}
+
+func rewardFor(winner, actor int, done bool) float32 {
+	if !done {
+		return 0
+	}
+	if winner == actor {
+		return 1
+	}
+	if winner == 0 {
+		return -0.1
+	}
+	return -1
+}
+
+func (s *Server) applyMove(player *domain.Player, direction int) {
+	var moves [8]domain.Move
+	count := s.game.GetValidMovesInto(player, &moves)
+	dx, dy := moveDirections[direction][0], moveDirections[direction][1]
+	for i := 0; i < count; i++ {
+		move := moves[i]
+		moveDX, moveDY := move.X-player.GridX, move.Y-player.GridY
+		var match bool
+		if direction < 4 {
+			// Cardinal: coincide por signo (cubre paso simple de 1 casilla
+			// y salto recto de 2 casillas sobre el rival).
+			match = (dx == 0 && moveDX == 0 && moveDY*dy > 0) || (dy == 0 && moveDY == 0 && moveDX*dx > 0)
+		} else {
+			// Diagonal: coincide por delta exacto (siempre magnitud 1 en ambos ejes).
+			match = moveDX == dx && moveDY == dy
+		}
+		if match {
+			player.GridX, player.GridY = move.X, move.Y
+			return
+		}
+	}
+}
+
+func (s *Server) applyWall(player *domain.Player, action int) {
+	index := action - 8
+	orientation := domain.WallHorizontal
+	if index >= 64 {
+		orientation, index = domain.WallVertical, index-64
+	}
+	s.game.PlaceWall(index/8, index%8, orientation, player)
+}
+
+func (s *Server) actionMask(player *domain.Player) []bool {
+	mask := make([]bool, ActionSpaceSize)
+	var moves [8]domain.Move
+	count := s.game.GetValidMovesInto(player, &moves)
+	for i := 0; i < count; i++ {
+		dx, dy := moves[i].X-player.GridX, moves[i].Y-player.GridY
+		var direction int
+		switch {
+		case dx == 0 && dy < 0:
+			direction = 0 // N (paso simple o salto recto)
+		case dx == 0 && dy > 0:
+			direction = 1 // S
+		case dy == 0 && dx < 0:
+			direction = 2 // W
+		case dy == 0 && dx > 0:
+			direction = 3 // E
+		case dx < 0 && dy < 0:
+			direction = 4 // NO
+		case dx > 0 && dy < 0:
+			direction = 5 // NE
+		case dx < 0 && dy > 0:
+			direction = 6 // SO
+		default:
+			direction = 7 // SE
+		}
+		// realAction es autoinversa (swaps), así que sirve tanto para
+		// convertir absoluto->lógico como lógico->absoluto.
+		mask[s.realAction(player, direction)] = true
+	}
+	if player.WallsLeft == 0 {
+		return mask
+	}
+	for x := 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if s.game.CanPlaceWall(x, y, domain.WallHorizontal, player) {
+				mask[s.realAction(player, 8+x*8+y)] = true
+			}
+			if s.game.CanPlaceWall(x, y, domain.WallVertical, player) {
+				mask[s.realAction(player, 72+x*8+y)] = true
+			}
+		}
+	}
+	return mask
+}
+
+func (s *Server) state(reward float32) *pb.EnvState {
+	current := s.game.ActivePlayer()
+	playerID := 0
+	if current != nil {
+		playerID = current.ID
+	}
+	return &pb.EnvState{Observation: s.observation(current), ActionMask: s.actionMaskOrEmpty(current), Reward: reward, Done: s.done, CurrentPlayer: int32(playerID), Info: map[string]float32{
+		"turns": float32(s.turns), "walls_placed": float32(len(s.game.Walls)), "winner": float32(s.winner),
+	}}
+}
+
+func (s *Server) actionMaskOrEmpty(player *domain.Player) []bool {
+	if s.done || player == nil {
+		return make([]bool, ActionSpaceSize)
+	}
+	return s.actionMask(player)
+}
+
+func (s *Server) observation(current *domain.Player) []float32 {
+	values := make([]float32, ObservationSize)
+	if current == nil {
+		return values
+	}
+	other := s.game.Players[0]
+	if other.ID == current.ID {
+		other = s.game.Players[1]
+	}
+	currentY, otherY := current.GridY, other.GridY
+	if current.ID == 2 {
+		currentY = 8 - currentY
+		otherY = 8 - otherY
+	}
+	values[current.GridX*9+currentY] = 1
+	values[81+other.GridX*9+otherY] = 1
+	for _, wall := range s.game.Walls {
+		base := 162
+		if wall.Orientation == domain.WallVertical {
+			base = 243
+		}
+		wallY := wall.GridY
+		if current.ID == 2 {
+			wallY = 7 - wallY
+		}
+		values[base+wall.GridX*9+wallY] = 1
+	}
+	values[486] = float32(current.WallsLeft) / 10
+	values[487] = float32(other.WallsLeft) / 10
+	values[488] = float32(s.turns) / maxTurns
+	return values
+}
+
+func StartGRPCServer(port string) error {
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterQuoridorEnvServer(grpcServer, NewServer())
+	return grpcServer.Serve(listener)
+}

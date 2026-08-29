@@ -1,0 +1,54 @@
+python_trainer:
+  grpc_host: "localhost:50051"
+  use_vertical_flip: false
+  epochs: 4
+  episodes_per_generation: 200
+  max_generations_per_epoch: 0
+  promotion_window: 100
+  promotion_win_rate: 0.85
+  update_timestep: 2000
+  save_interval: 50
+  log_interval: 10
+  model_path: "ppo_quoridor.pth"
+  stage_id_offset: 0
+  telemetry:
+    web_dir: "web"
+    port: 8080
+    window_size: 100
+
+rl_server:
+  max_steps: 150
+  reward:
+    win_reward: 2.0
+    lose_reward: -2.0
+    timeout_reward: -1.0
+    progress_my_weight: 0.02
+    progress_opp_weight: -0.02
+    wall_bonus_2plus: 0.05
+    wall_bonus_1: 0.01
+    wall_penalty_0: -0.02
+  stages:
+    1:
+      - bot: random
+        weight: 1.0
+    2:
+      - bot: minimax1
+        weight: 0.7
+      - bot: random
+        weight: 0.3
+    3:
+      - bot: minimax2
+        weight: 0.7
+      - bot: minimax1
+        weight: 0.2
+      - bot: random
+        weight: 0.1
+    4:
+      - bot: minimax3
+        weight: 0.4
+      - bot: minimax2
+        weight: 0.2
+      - bot: minimax1
+        weight: 0.3
+      - bot: random
+        weight: 0.1

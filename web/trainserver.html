@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quoridor PPO Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; padding: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 15px; margin-bottom: 20px; }
+        .card { background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
+        .card-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        .card-value { font-size: 22px; font-weight: bold; margin-top: 5px; }
+        
+        .charts-container { display: flex; flex-direction: column; gap: 20px; }
+        .chart-box { background: #1e293b; padding: 20px; border-radius: 8px; height: 350px; border: 1px solid #334155; }
+        .chart-title { font-size: 14px; font-weight: bold; color: #cbd5e1; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Quoridor PPO Agent Monitoring</h1>
+    <div class="stats-grid">
+        <div class="card"><div class="card-title">Episode</div><div class="card-value" id="epVal">-</div></div>
+        <div class="card"><div class="card-title">Epoch</div><div class="card-value" id="epochVal">-</div></div>
+        <div class="card"><div class="card-title">Generation</div><div class="card-value" id="genVal">-</div></div>
+        <div class="card"><div class="card-title">Win Rate</div><div class="card-value" id="winVal" style="color:#10b981;">-</div></div>
+        <div class="card"><div class="card-title">Avg Reward</div><div class="card-value" id="rewVal" style="color:#3b82f6;">-</div></div>
+        <div class="card"><div class="card-title">Avg Turns</div><div class="card-value" id="lenVal" style="color:#f59e0b;">-</div></div>
+        <div class="card"><div class="card-title">Epoch Turns</div><div class="card-value" id="epochTurnsVal" style="color:#eab308;">-</div></div>
+        <div class="card"><div class="card-title">Pawn Moves</div><div class="card-value" id="movVal" style="color:#06b6d4;">-</div></div>
+        <div class="card"><div class="card-title">Walls Placed</div><div class="card-value" id="wallVal" style="color:#ec4899;">-</div></div>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-box">
+            <div class="chart-title">📈 Performance (Win Rate & Reward)</div>
+            <div style="height: 290px;"><canvas id="perfChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-title">📊 Strategy & Actions (Pawn vs Walls)</div>
+            <div style="height: 290px;"><canvas id="actChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <div class="chart-title">🧭 Average Game Length (Turns)</div>
+            <div style="height: 290px;"><canvas id="turnChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        let chartPerf, chartAct, chartTurns;
+        let epochChangeIndices = [];
+
+        // Plugin to draw vertical dashed lines on Epoch changes
+        const epochLinePlugin = {
+            id: 'epochLinePlugin',
+            beforeDatasetsDraw: (chart) => {
+                if (!epochChangeIndices.length) return;
+                const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+                if (!x) return;
+
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 5]);
+
+                epochChangeIndices.forEach(index => {
+                    const xPos = x.getPixelForValue(index);
+                    if (xPos >= x.left && xPos <= x.right) {
+                        ctx.beginPath();
+                        ctx.moveTo(xPos, top);
+                        ctx.lineTo(xPos, bottom);
+                        ctx.stroke();
+                    }
+                });
+
+                ctx.restore();
+            }
+        };
+
+        Chart.register(epochLinePlugin);
+
+        async function update() {
+            try {
+                const res = await fetch('/data.json?t=' + Date.now());
+                const data = await res.json();
+                
+                document.getElementById('epVal').innerText = data.current_episode;
+                document.getElementById('epochVal').innerText = data.current_epoch ?? '-';
+                document.getElementById('genVal').innerText = data.current_generation ?? '-';
+                document.getElementById('winVal').innerText = data.latest_win_rate + '%';
+                document.getElementById('rewVal').innerText = data.latest_avg_reward;
+                document.getElementById('lenVal').innerText = data.latest_avg_length || '-';
+                document.getElementById('epochTurnsVal').innerText = data.latest_epoch_total_turns ?? '-';
+                document.getElementById('movVal').innerText = data.latest_avg_moves ?? '-';
+                document.getElementById('wallVal').innerText = data.latest_avg_walls ?? '-';
+
+                // Detect indices where Epoch changes for the vertical lines
+                epochChangeIndices = [];
+                data.history.forEach((h, i) => {
+                    if (i > 0 && h.epoch !== data.history[i - 1].epoch) {
+                        epochChangeIndices.push(i);
+                    }
+                });
+
+                // CLEAN LABELS: Only display label when Epoch or Generation actually changes
+                const labels = data.history.map((h, i) => {
+                    const prev = data.history[i - 1];
+                    const epoch = h.epoch ?? '-';
+                    const gen = h.generation ?? '-';
+
+                    // Show label for the very first point or whenever Epoch/Gen changes
+                    if (i === 0 || h.epoch !== prev.epoch || h.generation !== prev.generation) {
+                        return `E${epoch} G${gen}`;
+                    }
+                    return ''; // Empty label for intermediate checkpoints
+                });
+
+                const wins = data.history.map(h => h.win_rate);
+                const rewards = data.history.map(h => h.avg_reward);
+                const moves = data.history.map(h => h.avg_moves || 0);
+                const walls = data.history.map(h => h.avg_walls || 0);
+                const avgTurns = data.history.map(h => h.avg_length || 0);
+
+                // Common X Axis config to keep labels clean
+                const xAxisConfig = {
+                    ticks: {
+                        autoSkip: false, // Don't skip our custom filtered labels
+                        maxRotation: 0   // Keep labels horizontal
+                    }
+                };
+
+                if (!chartPerf || !chartAct || !chartTurns) {
+                    // 1. Performance Chart
+                    const ctxPerf = document.getElementById('perfChart').getContext('2d');
+                    chartPerf = new Chart(ctxPerf, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Win Rate (%)', data: wins, borderColor: '#10b981', yAxisID: 'y' },
+                                { label: 'Avg Reward', data: rewards, borderColor: '#3b82f6', yAxisID: 'y1' }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                x: xAxisConfig,
+                                y: { type: 'linear', position: 'left', min: 0, max: 100 },
+                                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false } }
+                            }
+                        }
+                    });
+
+                    // 2. Actions Chart
+                    const ctxAct = document.getElementById('actChart').getContext('2d');
+                    chartAct = new Chart(ctxAct, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Pawn Moves', data: moves, borderColor: '#06b6d4', yAxisID: 'y' },
+                                { label: 'Avg Walls Placed', data: walls, borderColor: '#ec4899', yAxisID: 'y' }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                x: xAxisConfig,
+                                y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Actions per Game' } }
+                            }
+                        }
+                    });
+
+                    // 3. Turns Chart
+                    const ctxTurns = document.getElementById('turnChart').getContext('2d');
+                    chartTurns = new Chart(ctxTurns, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Average Game Length (Turns)', data: avgTurns, borderColor: '#f59e0b' }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            scales: {
+                                x: xAxisConfig,
+                                y: { type: 'linear', position: 'left', beginAtZero: true }
+                            }
+                        }
+                    });
+                } else {
+                    chartPerf.data.labels = labels;
+                    chartPerf.data.datasets[0].data = wins;
+                    chartPerf.data.datasets[1].data = rewards;
+                    chartPerf.update();
+
+                    chartAct.data.labels = labels;
+                    chartAct.data.datasets[0].data = moves;
+                    chartAct.data.datasets[1].data = walls;
+                    chartAct.update();
+
+                    chartTurns.data.labels = labels;
+                    chartTurns.data.datasets[0].data = avgTurns;
+                    chartTurns.update();
+                }
+            } catch(e) {}
+        }
+
+        setInterval(update, 2000);
+        update();
+    </script>
+</body>
+</html>

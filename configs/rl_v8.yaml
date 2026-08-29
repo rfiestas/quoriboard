@@ -1,0 +1,10 @@
+grpc_target: localhost:50052
+total_timesteps: 10000000
+save_freq: 50000
+checkpoint_dir: models_quoridor_v8
+tensorboard_log_dir: ppo_quoridor_v8_tb
+learning_rate: 0.0003
+n_steps: 2048
+batch_size: 64
+opponent_sampling: uniform
+opponent_pool_cache_size: 8

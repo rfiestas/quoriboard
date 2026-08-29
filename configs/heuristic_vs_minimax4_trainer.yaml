@@ -1,0 +1,38 @@
+epochs: 10
+generations: 10
+population_size: 100
+top_keep: 20
+benchmark_add_per_epoch: 2
+benchmark_max_size: 100
+mutation_rate_start: 0.6
+mutation_rate_end: 0.08
+mutation_amount_start: 4.0
+mutation_amount_end: 0.6
+max_turns: 120
+seed_bots:
+  - E6G5M74
+  - E6G5M81
+  - E6G5M41
+  - E6G5M39
+  - E6G5M86
+  - E1G3M41
+  - E2G3M99
+  - E1G1M78
+  - E2G4M40
+  - E5G8M26
+  - E4G3M81
+  - E4G4M55
+  - E4G4M45
+  - E4G4M78
+  - E4G4M79
+  - E4G10M52
+  - E5G4M77
+  - E5G4M80
+  - E6G4M92
+  - E6G4M33
+benchmark_bots:
+  - aggressive
+  - minimax_4
+web_listen_addr: ":8080"
+dashboard_path: "./web"
+data_json_path: "./web/heuristic_vs_minimax4.json"

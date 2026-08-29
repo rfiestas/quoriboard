@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package quoridor_rl_v8;
+
+option go_package = "quoridor/internal/rlv8/pb;pb";
+
+service QuoridorEnv {
+  rpc Reset(ResetRequest) returns (EnvState);
+  rpc Step(StepRequest) returns (EnvState);
+}
+
+message ResetRequest {}
+
+message StepRequest {
+  int32 action = 1;
+}
+
+message EnvState {
+  repeated float observation = 1;
+  repeated bool action_mask = 2;
+  float reward = 3;
+  bool done = 4;
+  int32 current_player = 5;
+  map<string, float> info = 6;
+}

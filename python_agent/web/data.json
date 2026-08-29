@@ -1,0 +1,253 @@
+{
+  "current_episode": 270,
+  "latest_win_rate": 79.0,
+  "latest_avg_reward": 1.0042,
+  "latest_avg_length": 44.7,
+  "latest_avg_moves": 34.7,
+  "latest_avg_walls": 10.0,
+  "history": [
+    {
+      "episode": 10,
+      "win_rate": 50.0,
+      "avg_reward": 0.206,
+      "avg_length": 50.2,
+      "avg_moves": 40.2,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 20,
+      "win_rate": 55.0,
+      "avg_reward": 0.2415,
+      "avg_length": 50.9,
+      "avg_moves": 40.9,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 30,
+      "win_rate": 53.3,
+      "avg_reward": 0.1077,
+      "avg_length": 50.5,
+      "avg_moves": 40.5,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 40,
+      "win_rate": 55.0,
+      "avg_reward": 0.1275,
+      "avg_length": 51.1,
+      "avg_moves": 41.1,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 50,
+      "win_rate": 58.0,
+      "avg_reward": 0.2424,
+      "avg_length": 51.1,
+      "avg_moves": 41.1,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 60,
+      "win_rate": 60.0,
+      "avg_reward": 0.287,
+      "avg_length": 51.2,
+      "avg_moves": 41.2,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 70,
+      "win_rate": 58.6,
+      "avg_reward": 0.2281,
+      "avg_length": 51.5,
+      "avg_moves": 41.5,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 80,
+      "win_rate": 60.0,
+      "avg_reward": 0.3022,
+      "avg_length": 51.5,
+      "avg_moves": 41.5,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 90,
+      "win_rate": 60.0,
+      "avg_reward": 0.3191,
+      "avg_length": 51.0,
+      "avg_moves": 41.0,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 100,
+      "win_rate": 60.0,
+      "avg_reward": 0.3252,
+      "avg_length": 50.9,
+      "avg_moves": 40.9,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 110,
+      "win_rate": 63.0,
+      "avg_reward": 0.3965,
+      "avg_length": 50.6,
+      "avg_moves": 40.6,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 120,
+      "win_rate": 65.0,
+      "avg_reward": 0.4942,
+      "avg_length": 49.8,
+      "avg_moves": 39.8,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 130,
+      "win_rate": 66.0,
+      "avg_reward": 0.5375,
+      "avg_length": 49.8,
+      "avg_moves": 39.8,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 140,
+      "win_rate": 69.0,
+      "avg_reward": 0.651,
+      "avg_length": 48.1,
+      "avg_moves": 38.1,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 150,
+      "win_rate": 68.0,
+      "avg_reward": 0.6307,
+      "avg_length": 47.6,
+      "avg_moves": 37.6,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 160,
+      "win_rate": 66.0,
+      "avg_reward": 0.5853,
+      "avg_length": 47.7,
+      "avg_moves": 37.7,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 170,
+      "win_rate": 68.0,
+      "avg_reward": 0.6685,
+      "avg_length": 46.5,
+      "avg_moves": 36.5,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 180,
+      "win_rate": 69.0,
+      "avg_reward": 0.6951,
+      "avg_length": 45.0,
+      "avg_moves": 35.0,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 190,
+      "win_rate": 72.0,
+      "avg_reward": 0.796,
+      "avg_length": 44.2,
+      "avg_moves": 34.2,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 200,
+      "win_rate": 72.0,
+      "avg_reward": 0.8225,
+      "avg_length": 44.1,
+      "avg_moves": 34.1,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 210,
+      "win_rate": 70.0,
+      "avg_reward": 0.7558,
+      "avg_length": 45.8,
+      "avg_moves": 35.8,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 220,
+      "win_rate": 68.0,
+      "avg_reward": 0.6608,
+      "avg_length": 46.6,
+      "avg_moves": 36.6,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 230,
+      "win_rate": 71.0,
+      "avg_reward": 0.7876,
+      "avg_length": 45.7,
+      "avg_moves": 35.7,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 240,
+      "win_rate": 71.0,
+      "avg_reward": 0.7776,
+      "avg_length": 46.9,
+      "avg_moves": 36.9,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    },
+    {
+      "episode": 250,
+      "win_rate": 73.0,
+      "avg_reward": 0.8354,
+      "avg_length": 46.3,
+      "avg_moves": 36.3,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 260,
+      "win_rate": 76.0,
+      "avg_reward": 0.9484,
+      "avg_length": 45.5,
+      "avg_moves": 35.5,
+      "avg_walls": 10.0,
+      "last_winner": "Heuristic"
+    },
+    {
+      "episode": 270,
+      "win_rate": 79.0,
+      "avg_reward": 1.0042,
+      "avg_length": 44.7,
+      "avg_moves": 34.7,
+      "avg_walls": 10.0,
+      "last_winner": "PPO Agent"
+    }
+  ]
+}

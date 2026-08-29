@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package quoridor;
+option go_package = "internal/pb";
+
+service QuoridorEnv {
+  rpc Reset (ResetRequest) returns (StepResponse);
+  rpc Step (StepRequest) returns (StepResponse);
+}
+
+message ResetRequest {
+  int32 opponent_type = 1; // Stage/epoch ID para curriculum RL (el servidor resuelve el bot por YAML)
+}
+
+message StepRequest {
+  int32 action_id = 1; // ID de acción única (0 - 139)
+}
+
+message StepResponse {
+  repeated float state_tensor = 1; // Estado del tablero (491 floats)
+  repeated bool action_mask = 2;    // Máscara de acciones válidas (140 bools)
+  float reward = 3;                // Recompensa del turno
+  bool done = 4;                   // Fin de la partida
+  int32 winner = 5;                // ID del ganador (0 si continúa)
+}
